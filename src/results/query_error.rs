@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryError {
-    sql_state: String,
-    message: String,
-    error_code: i64,
-    error_name: String,
-    error_type: String,
+    pub sql_state: String,
+    pub message: String,
+    pub error_code: i64,
+    pub error_name: String,
+    pub error_type: String,
 }

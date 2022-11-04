@@ -11,8 +11,8 @@ pub struct QueryResultsValue {
     pub id: String,
     #[serde(with = "http_serde::uri")]
     pub info_uri: Uri,
-    #[serde(with = "http_serde::uri")]
-    pub next_uri: Uri,
+    #[serde(default, with = "opt_uri_serde")]
+    pub next_uri: Option<Uri>,
     #[serde(default, with = "opt_uri_serde")]
     pub partial_cancel_uri: Option<Uri>,
     pub columns: Option<Vec<Column>>,
