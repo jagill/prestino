@@ -1,32 +1,21 @@
-use hyper::client::HttpConnector;
-use hyper::{Client, Uri};
-use crate::results::QueryResultsValue;
 use crate::error::Error;
 use crate::PrestoApi;
-
+use crate::StatementExecutor;
+use hyper::Client;
 
 pub struct PrestoClient {
     base_url: String,
-    http_client: Client<HttpConnector>,
 }
 
 impl PrestoClient {
-    pub fn new(base_url: String) -> Self {
-        PrestoClient {
-            base_url,
-            http_client: Client::new(),
-        }
+    pub fn new(base_url: String) -> PrestoClient {
+        PrestoClient { base_url }
     }
 
-    pub async fn query(&self, query: &str) -> Result<QueryResultsValue, Error> {
-        let request = PrestoApi::post_query_request(&self.base_url, query)?;
-        PrestoApi::get_results(request, &self.http_client).await
-    }
-
-    pub async fn next_results(&self, next_uri: Uri) -> Result<QueryResultsValue, Error> {
-        let request = PrestoApi::get_results_request(next_uri)?;
-        PrestoApi::get_results(request, &self.http_client).await
+    pub async fn execute(self, statement: String) -> Result<StatementExecutor, Error> {
+        let request = PrestoApi::post_statement_request(&self.base_url, statement)?;
+        let http_client = Client::new();
+        let results = PrestoApi::get_results(request, &http_client).await?;
+        return Ok(StatementExecutor::new(http_client, results));
     }
 }
-
-

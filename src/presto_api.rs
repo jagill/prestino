@@ -30,10 +30,15 @@ impl PrestoApi {
             data.extend(&chunk?);
         }
 
+        println!("Response Body: {}", String::from_utf8(data.clone()).unwrap());
+
         Ok(serde_json::from_slice(&data)?)
     }
 
-    pub fn post_query_request(base_url: &str, query: &str) -> Result<Request<Body>, Error> {
+    pub fn post_statement_request(
+        base_url: &str,
+        statement: String,
+    ) -> Result<Request<Body>, Error> {
         let uri_str = format!("{}/v1/statement", base_url);
 
         let request = Request::builder()
@@ -41,7 +46,7 @@ impl PrestoApi {
             .uri(uri_str)
             .header("X-Trino-User", "jagill")
             // .header("content-type", "application/json")
-            .body(Body::from(query.to_owned()))?;
+            .body(Body::from(statement))?;
 
         Ok(request)
     }
