@@ -1,5 +1,3 @@
-
-
 pub mod opt_uri_serde {
     use http::uri::Uri;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};

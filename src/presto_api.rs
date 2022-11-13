@@ -30,7 +30,10 @@ impl PrestoApi {
             data.extend(&chunk?);
         }
 
-        println!("Response Body: {}", String::from_utf8(data.clone()).unwrap());
+        println!(
+            "Response Body: {}",
+            String::from_utf8(data.clone()).unwrap()
+        );
 
         Ok(serde_json::from_slice(&data)?)
     }

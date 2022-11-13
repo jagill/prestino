@@ -1,9 +1,9 @@
-use super::{Column, QueryError, QueryStats, QueryResultsValue};
+use super::{Column, QueryError, QueryResultsValue, QueryStats};
+use crate::utils::opt_uri_serde;
 use http::uri::Uri;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use crate::utils::opt_uri_serde;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -73,13 +73,12 @@ where
         //     }
         // }).collect();
 
-        let typed_data : Option<Vec<T>> = match data {
+        let typed_data: Option<Vec<T>> = match data {
             None => None,
-            Some(vals) => {vals
-            .into_iter()
-            .map(|val| serde_json::from_value(val).unwrap())
-            .collect()
-            }
+            Some(vals) => vals
+                .into_iter()
+                .map(|val| serde_json::from_value(val).unwrap())
+                .collect(),
         };
 
         Self {

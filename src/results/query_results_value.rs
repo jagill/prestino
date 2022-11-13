@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use http::uri::Uri;
-use std::fmt::Debug;
 use super::{Column, QueryError, QueryStats};
 use crate::utils::opt_uri_serde;
+use http::uri::Uri;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -32,7 +32,6 @@ mod tests {
         assert_eq!(&results.id, "20221102_184053_00002_ipi9h");
         assert_eq!(&results.stats.state, "QUEUED");
     }
-
 
     #[test]
     fn test_query_results_second_response() {
