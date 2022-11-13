@@ -3,6 +3,7 @@ use crate::PrestoApi;
 use crate::StatementExecutor;
 use hyper::Client;
 
+#[derive(Debug, Clone)]
 pub struct PrestoClient {
     base_url: String,
 }
@@ -12,7 +13,7 @@ impl PrestoClient {
         PrestoClient { base_url }
     }
 
-    pub async fn execute(self, statement: String) -> Result<StatementExecutor, Error> {
+    pub async fn execute(&self, statement: String) -> Result<StatementExecutor, Error> {
         let request = PrestoApi::post_statement_request(&self.base_url, statement)?;
         let http_client = Client::new();
         let results = PrestoApi::get_results(request, &http_client).await?;
