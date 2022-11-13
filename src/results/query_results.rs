@@ -1,4 +1,4 @@
-use super::{Column, QueryError, QueryResultsValue, QueryStats};
+use super::{Column, QueryError, QueryResultsJson, QueryStats};
 use crate::utils::opt_uri_serde;
 use http::uri::Uri;
 use serde::de::DeserializeOwned;
@@ -45,12 +45,12 @@ where
     }
 }
 
-impl<T> From<QueryResultsValue> for QueryResults<T>
+impl<T> From<QueryResultsJson> for QueryResults<T>
 where
     T: DeserializeOwned + Debug,
 {
-    fn from(raw: QueryResultsValue) -> Self {
-        let QueryResultsValue {
+    fn from(raw: QueryResultsJson) -> Self {
+        let QueryResultsJson {
             id,
             info_uri,
             next_uri,
@@ -153,13 +153,13 @@ mod tests {
 
     #[test]
     fn deserialize_basic_raw() {
-        let deserialized: QueryResultsValue = serde_json::from_str(BASE_RESULTS_STR).unwrap();
+        let deserialized: QueryResultsJson = serde_json::from_str(BASE_RESULTS_STR).unwrap();
         println!("deserialized = {:?}", deserialized);
     }
 
     #[test]
     fn deserialize_basic_typed_tuple() {
-        let deserialized_raw: QueryResultsValue = serde_json::from_str(BASE_RESULTS_STR).unwrap();
+        let deserialized_raw: QueryResultsJson = serde_json::from_str(BASE_RESULTS_STR).unwrap();
 
         let deserialized_tuple: QueryResults<(i64, bool)> =
             QueryResults::from(deserialized_raw.clone());

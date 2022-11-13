@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::results::QueryResultsValue;
+use crate::results::QueryResultsJson;
 use hyper::body::HttpBody as _;
 use hyper::client::HttpConnector;
 use hyper::Client;
@@ -11,12 +11,12 @@ impl PrestoApi {
     pub async fn get_results(
         request: Request<Body>,
         http_client: &Client<HttpConnector>,
-    ) -> Result<QueryResultsValue, Error> {
+    ) -> Result<QueryResultsJson, Error> {
         let response = http_client.request(request).await?;
         Self::parse_response(response).await
     }
 
-    async fn parse_response(mut response: Response<Body>) -> Result<QueryResultsValue, Error> {
+    async fn parse_response(mut response: Response<Body>) -> Result<QueryResultsJson, Error> {
         let status = response.status();
         println!("Response: {}", status);
         match status.as_u16() {
