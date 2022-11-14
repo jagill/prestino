@@ -18,7 +18,6 @@ impl PrestoApi {
 
     async fn parse_response(mut response: Response<Body>) -> Result<QueryResultsJson, Error> {
         let status = response.status();
-        println!("Response: {}", status);
         match status.as_u16() {
             200 => (),
             503 => unimplemented!(),

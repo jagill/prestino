@@ -1,34 +1,71 @@
 use futures::StreamExt;
-use prestino::PrestoClient;
-use tokio::io::AsyncWriteExt as _;
 use futures_util::pin_mut;
+use prestino::PrestoClient;
+use serde_json::Value;
+use tokio::io::AsyncWriteExt as _;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    let client = PrestoClient::new("http://localhost:8080".to_owned());
+    let host = "http://localhost:8080";
+    let query = "SELECT 1 AS a";
 
-    println!("Iterate results");
-    let executor = client.execute("SELECT 1 AS a".to_owned()).await?;
-    let query_results = executor.query_results();
-    pin_mut!(query_results);
-    while let Some(result) = query_results.next().await {
-        println!("Rows {:?}", result);
+    run(host, query, StreamMode::Response).await?;
+    run(host, query, StreamMode::Batch).await?;
+    run(host, query, StreamMode::Row).await?;
+    Ok(())
+}
+
+#[derive(Debug, Copy, Clone)]
+enum StreamMode {
+    Response,
+    Batch,
+    Row,
+}
+
+struct Outputter {}
+
+impl Outputter {
+    pub fn output(&self, val: &Value) {
+        println!(">>> Row {:?}", val);
+    }
+}
+
+async fn run(host: &str, query: &str, stream_mode: StreamMode) -> Result<(), anyhow::Error> {
+    let client = PrestoClient::new(host.to_owned());
+    let executor = client.execute(query.to_owned()).await?;
+    let outputter = Outputter {};
+
+    match stream_mode {
+        StreamMode::Response => {
+            println!("Iterate responses");
+            let stream = executor.responses();
+            pin_mut!(stream);
+            while let Some(items) = stream.next().await {
+                for item in items? {
+                    outputter.output(&item);
+                }
+            }
+        }
+        StreamMode::Batch => {
+            println!("Iterate batches");
+            let stream = executor.batches();
+            pin_mut!(stream);
+            while let Some(items) = stream.next().await {
+                for item in items? {
+                    outputter.output(&item);
+                }
+            }
+        }
+        StreamMode::Row => {
+            println!("Iterate rows");
+            let executor = client.execute(query.to_owned()).await?;
+            let stream = executor.rows();
+            pin_mut!(stream);
+            while let Some(item) = stream.next().await {
+                outputter.output(&item?);
+            }
+        }
     }
 
-    println!("Iterate batches");
-    let executor = client.execute("SELECT 1 AS a".to_owned()).await?;
-    let batches = executor.batches();
-    pin_mut!(batches);
-    while let Some(batch) = batches.next().await {
-        println!("Batch {:?}", batch);
-    }
-
-    println!("Iterate rows");
-    let executor = client.execute("SELECT 1 AS a".to_owned()).await?;
-    let rows = executor.rows();
-    pin_mut!(rows);
-    while let Some(row) = rows.next().await {
-        println!("Row {:?}", row);
-    }
     Ok(())
 }

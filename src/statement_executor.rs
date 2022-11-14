@@ -41,7 +41,7 @@ impl StatementExecutor {
         Some(self._fetch_next_results(next_uri).await)
     }
 
-    pub fn query_results(mut self) -> impl Stream<Item = Result<Vec<Value>, Error>> {
+    pub fn responses(mut self) -> impl Stream<Item = Result<Vec<Value>, Error>> {
         try_stream! {
             yield self.results.data.take().unwrap_or_default();
 
@@ -54,7 +54,7 @@ impl StatementExecutor {
 
     pub fn batches(self) -> impl Stream<Item = Result<Vec<Value>, Error>> {
         try_stream! {
-            let query_results = self.query_results();
+            let query_results = self.responses();
             pin_mut!(query_results);
             for await rows_result in query_results {
                 let rows = rows_result.unwrap();
