@@ -1,4 +1,5 @@
 use crate::error::Error;
+use crate::headers::{HeaderBuilder, HeaderField};
 use crate::results::QueryResultsJson;
 use hyper::body::HttpBody as _;
 use hyper::client::HttpConnector;
@@ -43,10 +44,11 @@ impl PrestoApi {
     ) -> Result<Request<Body>, Error> {
         let uri_str = format!("{}/v1/statement", base_url);
 
-        let request = Request::builder()
-            .method(Method::POST)
-            .uri(uri_str)
-            .header("X-Trino-User", "jagill")
+        let builder = Request::builder().method(Method::POST).uri(uri_str);
+
+        let request = HeaderBuilder::new()
+            .add_header(HeaderField::User("jagill".to_string()))
+            .set_headers(builder)
             // .header("content-type", "application/json")
             .body(Body::from(statement))?;
 
