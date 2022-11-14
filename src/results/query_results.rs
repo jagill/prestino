@@ -21,13 +21,6 @@ pub struct QueryResults<T> {
     pub error: Option<QueryError>,
 }
 
-// #[derive(Debug)]
-// pub struct TypedColumn {
-//     name: String,
-//     type_name: String,
-//     r#type: DataType,
-// }
-
 impl<T> QueryResults<T>
 where
     T: DeserializeOwned + Debug,
@@ -60,18 +53,6 @@ where
             stats,
             error,
         } = raw;
-
-        // let typed_columns: Vec<_> = columns.into_iter().map(|col| {
-        //     let RawColumn {
-        //         name, type_name
-        //     } = col;
-        //     let col_type = crate::parse_data_type::parse_data_type(&type_name).unwrap();
-        //     TypedColumn {
-        //         name,
-        //         type_name,
-        //         r#type: col_type,
-        //     }
-        // }).collect();
 
         let typed_data: Option<Vec<T>> = match data {
             None => None,
@@ -179,10 +160,10 @@ mod tests {
 
         // let deserialized_raw: RawQueryResults = serde_json::from_str(BASE_RESULTS_STR).unwrap();
         // let deserialized_tuple: QueryResults<StructRow> = QueryResults::from(deserialized_raw.clone());
-        let deserialized_tuple: QueryResults<StructRow> =
+        let deserialized_struct: QueryResults<StructRow> =
             serde_json::from_str(BASE_RESULTS_STR).unwrap();
-        println!("deserialized_tuple = {:?}", deserialized_tuple);
-        let row = &deserialized_tuple.rows().unwrap()[0];
+        println!("deserialized_struct = {:?}", deserialized_struct);
+        let row = &deserialized_struct.rows().unwrap()[0];
         assert_eq!(row.a_int, 123);
         assert_eq!(row.a_bool, true);
     }
