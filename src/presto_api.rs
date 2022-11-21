@@ -54,6 +54,7 @@ impl PrestoApi {
     }
 
     pub fn get_results_request(next_uri: Uri) -> Result<Request<Body>, Error> {
+        println!("Getting next results: {}", next_uri);
         let request = Request::builder()
             .method(Method::GET)
             .uri(next_uri)
