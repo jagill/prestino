@@ -23,7 +23,14 @@ impl HeaderField {
     fn get_key(&self) -> &'static str {
         match self {
             HeaderField::User(_) => "User",
-            _ => todo!(),
+            HeaderField::Source(_) => "Source",
+            HeaderField::Catalog(_) => "Catalog",
+            HeaderField::Schema(_) => "Schema",
+            HeaderField::TraceToken(_) => "Trace-Token",
+            HeaderField::Session(_) => "Session",
+            HeaderField::TransactionId(_) => "Transaction-Id",
+            HeaderField::ClientInfo(_) => "Client-Info",
+            HeaderField::ClientTag(_) => "Client-Tags",
         }
     }
 }
@@ -49,6 +56,13 @@ impl HeaderBuilder {
             let key = format!("{}{}", Self::get_prefix(), header.get_key());
             let val = match header {
                 HeaderField::User(val) => val,
+                HeaderField::Source(val) => val,
+                HeaderField::Catalog(val) => val,
+                HeaderField::Schema(val) => val,
+                HeaderField::TraceToken(val) => val,
+                HeaderField::TransactionId(val) => val,
+                HeaderField::ClientInfo(val) => val,
+                HeaderField::ClientTag(val) => val,
                 _ => todo!(),
             };
             builder = builder.header(key, val);
