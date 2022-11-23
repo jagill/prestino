@@ -51,6 +51,14 @@ impl HeaderBuilder {
     fn get_prefix() -> &'static str {
         "X-Trino-"
     }
+    fn serialize_session(session: &HashMap<String, String>) -> String {
+        let serialized = session
+            .iter()
+            .map(|(key, val)| format!("{}={}", key, val))
+            .collect::<Vec<String>>()
+            .join(",");
+        serialized
+    }
     pub fn set_headers(&self, mut builder: Builder) -> Builder {
         for header in &self.headers {
             let key = format!("{}{}", Self::get_prefix(), header.get_key());
@@ -60,10 +68,10 @@ impl HeaderBuilder {
                 HeaderField::Catalog(val) => val,
                 HeaderField::Schema(val) => val,
                 HeaderField::TraceToken(val) => val,
+                HeaderField::Session(val) => &Self::serialize_session(val),
                 HeaderField::TransactionId(val) => val,
                 HeaderField::ClientInfo(val) => val,
                 HeaderField::ClientTag(val) => val,
-                _ => todo!(),
             };
             builder = builder.header(key, val);
         }
