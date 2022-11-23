@@ -62,16 +62,16 @@ impl HeaderBuilder {
     pub fn set_headers(&self, mut builder: Builder) -> Builder {
         for header in &self.headers {
             let key = format!("{}{}", Self::get_prefix(), header.get_key());
-            let val = match header {
-                HeaderField::User(val) => val,
-                HeaderField::Source(val) => val,
-                HeaderField::Catalog(val) => val,
-                HeaderField::Schema(val) => val,
-                HeaderField::TraceToken(val) => val,
-                HeaderField::Session(val) => &Self::serialize_session(val),
-                HeaderField::TransactionId(val) => val,
-                HeaderField::ClientInfo(val) => val,
-                HeaderField::ClientTag(val) => val,
+            let val: String = match header {
+                HeaderField::User(val) => val.to_owned(),
+                HeaderField::Source(val) => val.to_owned(),
+                HeaderField::Catalog(val) => val.to_owned(),
+                HeaderField::Schema(val) => val.to_owned(),
+                HeaderField::TraceToken(val) => val.to_owned(),
+                HeaderField::Session(val) => Self::serialize_session(val),
+                HeaderField::TransactionId(val) => val.to_owned(),
+                HeaderField::ClientInfo(val) => val.to_owned(),
+                HeaderField::ClientTag(val) => val.to_owned(),
             };
             builder = builder.header(key, val);
         }
