@@ -1,4 +1,4 @@
-use super::{Column, QueryError, QueryResultsJson, QueryStats};
+use super::{Column, QueryError, QueryStats};
 use crate::utils::opt_uri_serde;
 use http::uri::Uri;
 use serde::de::DeserializeOwned;
@@ -38,46 +38,10 @@ where
     }
 }
 
-impl<T> From<QueryResultsJson> for QueryResults<T>
-where
-    T: DeserializeOwned + Debug,
-{
-    fn from(raw: QueryResultsJson) -> Self {
-        let QueryResultsJson {
-            id,
-            info_uri,
-            next_uri,
-            partial_cancel_uri,
-            columns,
-            data,
-            stats,
-            error,
-        } = raw;
-
-        let typed_data: Option<Vec<T>> = match data {
-            None => None,
-            Some(vals) => vals
-                .into_iter()
-                .map(|val| serde_json::from_value(val).unwrap())
-                .collect(),
-        };
-
-        Self {
-            id,
-            info_uri,
-            next_uri,
-            partial_cancel_uri,
-            columns,
-            data: typed_data,
-            stats,
-            error,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use serde::Deserialize;
+    use serde_json::{json, Value};
 
     use super::*;
 
@@ -133,21 +97,18 @@ mod tests {
         "#;
 
     #[test]
-    fn deserialize_basic_raw() {
-        let deserialized: QueryResultsJson = serde_json::from_str(BASE_RESULTS_STR).unwrap();
+    fn deserialize_basic_value() {
+        let deserialized: QueryResults<Value> = serde_json::from_str(BASE_RESULTS_STR).unwrap();
         println!("deserialized = {:?}", deserialized);
+        assert_eq!(deserialized.data.unwrap(), [json!([123, true])]);
     }
 
     #[test]
-    fn deserialize_basic_typed_tuple() {
-        let deserialized_raw: QueryResultsJson = serde_json::from_str(BASE_RESULTS_STR).unwrap();
-
+    fn deserialize_basic_tuple() {
         let deserialized_tuple: QueryResults<(i64, bool)> =
-            QueryResults::from(deserialized_raw.clone());
-        println!("deserialized_tuple = {:?}", deserialized_tuple);
-        let row = &deserialized_tuple.rows().unwrap()[0];
-        assert_eq!(row.0, 123);
-        assert_eq!(row.1, true);
+            serde_json::from_str(BASE_RESULTS_STR).unwrap();
+        println!("deserialized = {:?}", deserialized_tuple);
+        assert_eq!(deserialized_tuple.data.unwrap(), [(123, true)]);
     }
 
     #[test]

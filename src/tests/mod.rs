@@ -10,7 +10,6 @@ mod tests {
     use serde_json::{json, Value};
     use wiremock::MockServer;
 
-
     async fn get_rows(response_strs: &[&str]) -> Result<Vec<Value>, Error> {
         let mock_server = MockServer::start().await;
         let base_uri = mock_server.uri();

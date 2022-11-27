@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::results::QueryResultsJson;
+use crate::results::QueryResults;
 use crate::PrestoApi;
 use async_stream::try_stream;
 use futures::Stream;
@@ -11,11 +11,11 @@ use serde_json::Value;
 pub struct StatementExecutor {
     id: String,
     http_client: Client<HttpConnector>,
-    results: QueryResultsJson,
+    results: QueryResults<Value>,
 }
 
 impl StatementExecutor {
-    pub fn new(http_client: Client<HttpConnector>, results: QueryResultsJson) -> Self {
+    pub fn new(http_client: Client<HttpConnector>, results: QueryResults<Value>) -> Self {
         Self {
             id: results.id.clone(),
             http_client,
