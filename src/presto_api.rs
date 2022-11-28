@@ -37,6 +37,8 @@ impl PrestoApi {
             String::from_utf8(data.clone()).unwrap()
         );
 
+        // TODO: Make better error messages on json deser.  In particular, if there's a type error,
+        // can we print out the row that causes the error?
         Ok(serde_json::from_slice(&data)?)
     }
 

@@ -57,7 +57,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
             let query_results = self.responses();
             pin_mut!(query_results);
             for await rows_result in query_results {
-                let rows = rows_result.unwrap();
+                let rows = rows_result?;
                 if !rows.is_empty() {
                     yield rows;
                 }
