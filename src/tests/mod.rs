@@ -7,10 +7,11 @@ mod tests {
     use crate::{Error, PrestoClient};
     use futures::TryStreamExt;
     use futures_util::pin_mut;
+    use serde::de::DeserializeOwned;
     use serde_json::{json, Value};
     use wiremock::MockServer;
 
-    async fn get_rows(response_strs: &[&str]) -> Result<Vec<Value>, Error> {
+    async fn get_rows<T: DeserializeOwned>(response_strs: &[&str]) -> Result<Vec<T>, Error> {
         let mock_server = MockServer::start().await;
         let base_uri = mock_server.uri();
         println!("{base_uri}");
@@ -22,13 +23,13 @@ mod tests {
 
         let stream = executor.rows();
         pin_mut!(stream);
-        let rows: Result<Vec<Value>, Error> = stream.try_collect().await;
+        let rows: Result<Vec<T>, Error> = stream.try_collect().await;
         rows
     }
 
     #[tokio::test]
     async fn test_basic_flow_1() {
-        let rows = get_rows(super::response_set_1::RESPONSES).await;
+        let rows = get_rows::<Value>(super::response_set_1::RESPONSES).await;
         assert_eq!(rows.unwrap(), vec![json!([1])],);
     }
 
@@ -54,7 +55,7 @@ mod tests {
             ],
         );
         let response_ref: Vec<&str> = response_strs.iter().map(AsRef::as_ref).collect();
-        let rows = get_rows(&response_ref).await;
+        let rows: Result<Vec<Value>, Error> = get_rows(&response_ref).await;
         assert_eq!(
             rows.unwrap(),
             vec![

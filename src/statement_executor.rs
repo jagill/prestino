@@ -6,16 +6,16 @@ use futures::Stream;
 use futures_util::pin_mut;
 use hyper::client::HttpConnector;
 use hyper::{Client, Uri};
-use serde_json::Value;
+use serde::de::DeserializeOwned;
 
-pub struct StatementExecutor {
+pub struct StatementExecutor<T: DeserializeOwned> {
     id: String,
     http_client: Client<HttpConnector>,
-    results: QueryResults<Value>,
+    results: QueryResults<T>,
 }
 
-impl StatementExecutor {
-    pub fn new(http_client: Client<HttpConnector>, results: QueryResults<Value>) -> Self {
+impl<T: DeserializeOwned> StatementExecutor<T> {
+    pub fn new(http_client: Client<HttpConnector>, results: QueryResults<T>) -> Self {
         Self {
             id: results.id.clone(),
             http_client,
@@ -41,7 +41,7 @@ impl StatementExecutor {
         Some(self._fetch_next_results(next_uri).await)
     }
 
-    pub fn responses(mut self) -> impl Stream<Item = Result<Vec<Value>, Error>> {
+    pub fn responses(mut self) -> impl Stream<Item = Result<Vec<T>, Error>> {
         try_stream! {
             yield self.results.data.take().unwrap_or_default();
 
@@ -52,7 +52,7 @@ impl StatementExecutor {
         }
     }
 
-    pub fn batches(self) -> impl Stream<Item = Result<Vec<Value>, Error>> {
+    pub fn batches(self) -> impl Stream<Item = Result<Vec<T>, Error>> {
         try_stream! {
             let query_results = self.responses();
             pin_mut!(query_results);
@@ -65,7 +65,7 @@ impl StatementExecutor {
         }
     }
 
-    pub fn rows(self) -> impl Stream<Item = Result<Value, Error>> {
+    pub fn rows(self) -> impl Stream<Item = Result<T, Error>> {
         try_stream! {
             let batches = self.batches();
             pin_mut!(batches);

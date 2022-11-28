@@ -4,20 +4,22 @@ use hyper::body::HttpBody as _;
 use hyper::client::HttpConnector;
 use hyper::Client;
 use hyper::{Body, Method, Request, Response, Uri};
-use serde_json::Value;
+use serde::de::DeserializeOwned;
 
 pub struct PrestoApi {}
 
 impl PrestoApi {
-    pub async fn get_results(
+    pub async fn get_results<T: DeserializeOwned>(
         request: Request<Body>,
         http_client: &Client<HttpConnector>,
-    ) -> Result<QueryResults<Value>, Error> {
+    ) -> Result<QueryResults<T>, Error> {
         let response = http_client.request(request).await?;
         Self::parse_response(response).await
     }
 
-    async fn parse_response(mut response: Response<Body>) -> Result<QueryResults<Value>, Error> {
+    async fn parse_response<T: DeserializeOwned>(
+        mut response: Response<Body>,
+    ) -> Result<QueryResults<T>, Error> {
         let status = response.status();
         match status.as_u16() {
             200 => (),
