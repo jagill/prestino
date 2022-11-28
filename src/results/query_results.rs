@@ -128,4 +128,19 @@ mod tests {
         assert_eq!(row.a_int, 123);
         assert_eq!(row.a_bool, true);
     }
+
+    #[test]
+    fn deserialize_parse_error() {
+        let response_str = r#"
+            {"id":"20221128_035242_00004_educe","infoUri":"http://localhost:8080/ui/query.html?20221128_035242_00004_educe","stats":{"state":"FAILED","queued":false,"scheduled":false,"nodes":0,"totalSplits":0,"queuedSplits":0,"runningSplits":0,"completedSplits":0,"cpuTimeMillis":0,"wallTimeMillis":0,"queuedTimeMillis":0,"elapsedTimeMillis":0,"processedRows":0,"processedBytes":0,"physicalInputBytes":0,"peakMemoryBytes":0,"spilledBytes":0},"error":{"message":"line 5:14: mismatched input \u0027BOOLEAN\u0027. Expecting: \u0027)\u0027, \u0027,\u0027","errorCode":1,"errorName":"SYNTAX_ERROR","errorType":"USER_ERROR","errorLocation":{"lineNumber":5,"columnNumber":14},"failureInfo":{"type":"io.trino.sql.parser.ParsingException","message":"line 5:14: mismatched input \u0027BOOLEAN\u0027. Expecting: \u0027)\u0027, \u0027,\u0027","suppressed":[],"stack":["io.trino.sql.parser.ErrorHandler.syntaxError(ErrorHandler.java:109)","org.antlr.v4.runtime.ProxyErrorListener.syntaxError(ProxyErrorListener.java:41)","org.antlr.v4.runtime.Parser.notifyErrorListeners(Parser.java:544)","org.antlr.v4.runtime.DefaultErrorStrategy.reportUnwantedToken(DefaultErrorStrategy.java:377)","org.antlr.v4.runtime.DefaultErrorStrategy.singleTokenDeletion(DefaultErrorStrategy.java:548)","org.antlr.v4.runtime.DefaultErrorStrategy.sync(DefaultErrorStrategy.java:266)","io.trino.sql.parser.SqlBaseParser.columnAliases(SqlBaseParser.java:9472)","io.trino.sql.parser.SqlBaseParser.aliasedRelation(SqlBaseParser.java:9413)","io.trino.sql.parser.SqlBaseParser.patternRecognition(SqlBaseParser.java:8634)","io.trino.sql.parser.SqlBaseParser.sampledRelation(SqlBaseParser.java:8258)","io.trino.sql.parser.SqlBaseParser.relation(SqlBaseParser.java:7929)","io.trino.sql.parser.SqlBaseParser.querySpecification(SqlBaseParser.java:6845)","io.trino.sql.parser.SqlBaseParser.queryPrimary(SqlBaseParser.java:6577)","io.trino.sql.parser.SqlBaseParser.queryTerm(SqlBaseParser.java:6377)","io.trino.sql.parser.SqlBaseParser.queryNoWith(SqlBaseParser.java:6023)","io.trino.sql.parser.SqlBaseParser.query(SqlBaseParser.java:5180)","io.trino.sql.parser.SqlBaseParser.statement(SqlBaseParser.java:2636)","io.trino.sql.parser.SqlBaseParser.singleStatement(SqlBaseParser.java:321)","io.trino.sql.parser.SqlParser.invokeParser(SqlParser.java:143)","io.trino.sql.parser.SqlParser.createStatement(SqlParser.java:85)","io.trino.execution.QueryPreparer.prepareQuery(QueryPreparer.java:55)","io.trino.dispatcher.DispatchManager.createQueryInternal(DispatchManager.java:179)","io.trino.dispatcher.DispatchManager.lambda$createQuery$0(DispatchManager.java:148)","io.trino.$gen.Trino_402____20221128_035215_2.run(Unknown Source)","java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)","java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)","java.base/java.lang.Thread.run(Thread.java:833)"],"errorLocation":{"lineNumber":5,"columnNumber":14}}},"warnings":[]}
+        "#;
+        let response: QueryResults<Value> = serde_json::from_str(response_str).unwrap();
+        assert_eq!(response.stats.state, "FAILED");
+        assert!(response.error.is_some());
+        let error = response.error.clone().unwrap();
+        assert_eq!(error.error_code, 1);
+        assert_eq!(error.error_name, "SYNTAX_ERROR");
+        assert_eq!(error.error_type, "USER_ERROR");
+        assert!(error.error_location.is_some());
+    }
 }
