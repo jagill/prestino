@@ -1,7 +1,7 @@
 mod common;
 use common::get_rows;
 use maplit::hashmap;
-use prestino::Error;
+use prestino::PrestinoError;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -158,18 +158,18 @@ async fn test_basic_types_nullable_non_option() {
     ) AS t(b, int8, int16, int32, int64, float32, float64, string)
     "#;
 
-    let result: Result<Vec<(bool, i8, i16, i32, i64, f32, f64, String)>, Error> =
+    let result: Result<Vec<(bool, i8, i16, i32, i64, f32, f64, String)>, PrestinoError> =
         get_rows(sql).await;
     match result {
         Ok(_) => panic!("Failed to error on incorrect type deserialization."),
-        Err(Error::JsonParseError(e)) => println!("Found right error: {e:?}"),
+        Err(PrestinoError::JsonParseError(e)) => println!("Found right error: {e:?}"),
         Err(err) => panic!("Unexpected error: {err:?}"),
     }
 
-    let result2: Result<Vec<BasicTypes>, Error> = get_rows(sql).await;
+    let result2: Result<Vec<BasicTypes>, PrestinoError> = get_rows(sql).await;
     match result2 {
         Ok(_) => panic!("Failed to error on incorrect type deserialization."),
-        Err(Error::JsonParseError(e)) => println!("Found right error: {e:?}"),
+        Err(PrestinoError::JsonParseError(e)) => println!("Found right error: {e:?}"),
         Err(err) => panic!("Unexpected error: {err:?}"),
     }
 }

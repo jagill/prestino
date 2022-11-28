@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::PrestinoError;
 use crate::results::QueryResults;
 use hyper::body::HttpBody as _;
 use hyper::client::HttpConnector;
@@ -12,19 +12,19 @@ impl PrestoApi {
     pub async fn get_results<T: DeserializeOwned>(
         request: Request<Body>,
         http_client: &Client<HttpConnector>,
-    ) -> Result<QueryResults<T>, Error> {
+    ) -> Result<QueryResults<T>, PrestinoError> {
         let response = http_client.request(request).await?;
         Self::parse_response(response).await
     }
 
     async fn parse_response<T: DeserializeOwned>(
         mut response: Response<Body>,
-    ) -> Result<QueryResults<T>, Error> {
+    ) -> Result<QueryResults<T>, PrestinoError> {
         let status = response.status();
         match status.as_u16() {
             200 => (),
             503 => unimplemented!(),
-            code => return Err(Error::from_status_code(code)),
+            code => return Err(PrestinoError::from_status_code(code)),
         }
 
         let mut data = Vec::new();
@@ -45,7 +45,7 @@ impl PrestoApi {
     pub fn post_statement_request(
         base_url: &str,
         statement: String,
-    ) -> Result<Request<Body>, Error> {
+    ) -> Result<Request<Body>, PrestinoError> {
         let uri_str = format!("{}/v1/statement", base_url);
 
         let request = Request::builder()
@@ -58,7 +58,7 @@ impl PrestoApi {
         Ok(request)
     }
 
-    pub fn get_results_request(next_uri: Uri) -> Result<Request<Body>, Error> {
+    pub fn get_results_request(next_uri: Uri) -> Result<Request<Body>, PrestinoError> {
         println!("Getting next results: {}", next_uri);
         let request = Request::builder()
             .method(Method::GET)

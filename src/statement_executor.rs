@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::PrestinoError;
 use crate::results::{Column, QueryError, QueryResults, QueryStats};
 use crate::PrestoApi;
 use async_stream::try_stream;
@@ -51,7 +51,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         &self.results.stats
     }
 
-    pub fn take_result(&mut self) -> Option<Result<Vec<T>, Error>> {
+    pub fn take_result(&mut self) -> Option<Result<Vec<T>, PrestinoError>> {
         if let Some(err) = self.take_error() {
             Some(Err(err.into()))
         } else if let Some(rows) = self.take_data() {
@@ -61,7 +61,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         }
     }
 
-    pub async fn next_response(&mut self) -> Option<Result<Vec<T>, Error>> {
+    pub async fn next_response(&mut self) -> Option<Result<Vec<T>, PrestinoError>> {
         if let Some(result) = self.take_result() {
             return Some(result);
         }
@@ -84,7 +84,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         Some(Ok(Vec::new()))
     }
 
-    pub fn responses(mut self) -> impl Stream<Item = Result<Vec<T>, Error>> {
+    pub fn responses(mut self) -> impl Stream<Item = Result<Vec<T>, PrestinoError>> {
         try_stream! {
             while let Some(response) = self.next_response().await {
                 yield response?;
@@ -92,7 +92,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         }
     }
 
-    pub fn batches(self) -> impl Stream<Item = Result<Vec<T>, Error>> {
+    pub fn batches(self) -> impl Stream<Item = Result<Vec<T>, PrestinoError>> {
         try_stream! {
             let query_results = self.responses();
             pin_mut!(query_results);
@@ -105,7 +105,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         }
     }
 
-    pub fn rows(self) -> impl Stream<Item = Result<T, Error>> {
+    pub fn rows(self) -> impl Stream<Item = Result<T, PrestinoError>> {
         try_stream! {
             let batches = self.batches();
             pin_mut!(batches);

@@ -1,5 +1,5 @@
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub enum PrestinoError {
     #[error("http error")]
     HttpError(#[from] hyper::http::Error),
     #[error("hyper error")]
@@ -12,8 +12,8 @@ pub enum Error {
     QueryError(#[from] crate::results::QueryError),
 }
 
-impl Error {
+impl PrestinoError {
     pub fn from_status_code(code: u16) -> Self {
-        Error::StatusCodeError(code)
+        PrestinoError::StatusCodeError(code)
     }
 }
