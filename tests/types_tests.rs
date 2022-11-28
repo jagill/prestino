@@ -243,6 +243,7 @@ async fn test_map_types() {
         map_opt: HashMap<i32, Option<bool>>,
         map_map: HashMap<i32, HashMap<String, bool>>,
     }
+
     let rows2: Vec<MapRow> = get_rows(sql).await.unwrap();
     assert_eq!(
         rows2,
@@ -250,6 +251,55 @@ async fn test_map_types() {
             map_: hashmap! {1 => true, 2 => false},
             map_opt: hashmap! {1 => Some(true), 2 => None},
             map_map: hashmap! {1 => hashmap!{"a".to_owned() => true, "b".to_owned() => false}, 2 => hashmap!{}},
+        }]
+    );
+}
+
+#[tokio::test]
+async fn test_struct_types() {
+    let sql = r#"
+        SELECT
+            CAST(ROW(1, 2.0) AS ROW(x BIGINT, y DOUBLE)) AS s1,
+            CAST(ROW('cat', null) AS ROW(s VARCHAR, b BOOLEAN)) AS s2
+    "#;
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Struct1 {
+        x: i64,
+        y: f64,
+    }
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct Struct2 {
+        s: String,
+        b: Option<bool>,
+    }
+
+    let rows: Vec<(Struct1, Struct2)> = get_rows(sql).await.unwrap();
+    let expected: Vec<(Struct1, Struct2)> = vec![(
+        Struct1 { x: 1, y: 2.0 },
+        Struct2 {
+            s: "cat".to_string(),
+            b: None,
+        },
+    )];
+    assert_eq!(rows, expected);
+
+    #[derive(Debug, PartialEq, Deserialize)]
+    struct StructRow {
+        s1: Struct1,
+        s2: Struct2,
+    }
+
+    let rows2: Vec<StructRow> = get_rows(sql).await.unwrap();
+    assert_eq!(
+        rows2,
+        vec![StructRow {
+            s1: Struct1 { x: 1, y: 2.0 },
+            s2: Struct2 {
+                s: "cat".to_string(),
+                b: None
+            }
         }]
     );
 }
