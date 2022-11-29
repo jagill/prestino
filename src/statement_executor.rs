@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::results::QueryResults;
+use crate::results::{Column, QueryError, QueryResults, QueryStats};
 use crate::PrestoApi;
 use async_stream::try_stream;
 use futures::Stream;
@@ -27,27 +27,67 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         &self.id
     }
 
-    // Fetch and store (not return) next results given a uri
-    async fn _fetch_next_results(&mut self, uri: Uri) -> Result<(), Error> {
-        let request = PrestoApi::get_results_request(uri)?;
-        let results = PrestoApi::get_results(request, &self.http_client).await?;
-        self.results = results;
-        Ok(())
+    pub fn info_uri(&self) -> &Uri {
+        &self.results.info_uri
     }
 
-    /// Fetch and store (not return) next QueryResultsValue
-    pub async fn fetch_next_results(&mut self) -> Option<Result<(), Error>> {
-        let next_uri = self.results.next_uri.take()?;
-        Some(self._fetch_next_results(next_uri).await)
+    pub fn columns(&self) -> Option<&[Column]> {
+        self.results.columns.as_deref()
+    }
+
+    pub fn take_next_uri(&mut self) -> Option<Uri> {
+        self.results.next_uri.take()
+    }
+
+    pub fn take_data(&mut self) -> Option<Vec<T>> {
+        self.results.data.take()
+    }
+
+    pub fn take_error(&mut self) -> Option<QueryError> {
+        self.results.error.take()
+    }
+
+    pub fn stats(&self) -> &QueryStats {
+        &self.results.stats
+    }
+
+    pub fn take_result(&mut self) -> Option<Result<Vec<T>, Error>> {
+        if let Some(err) = self.take_error() {
+            Some(Err(err.into()))
+        } else if let Some(rows) = self.take_data() {
+            Some(Ok(rows))
+        } else {
+            None
+        }
+    }
+
+    pub async fn next_response(&mut self) -> Option<Result<Vec<T>, Error>> {
+        if let Some(result) = self.take_result() {
+            return Some(result);
+        }
+
+        let Some(next_uri) = self.take_next_uri() else {
+            return None;
+        };
+
+        let request = match PrestoApi::get_results_request(next_uri) {
+            Err(err) => return Some(Err(err)),
+            Ok(request) => request,
+        };
+
+        self.results = match PrestoApi::get_results(request, &self.http_client).await {
+            Err(err) => return Some(Err(err)),
+            Ok(results) => results,
+        };
+
+        // Return an empty vec as a placeholder meaning "try again"
+        Some(Ok(Vec::new()))
     }
 
     pub fn responses(mut self) -> impl Stream<Item = Result<Vec<T>, Error>> {
         try_stream! {
-            yield self.results.data.take().unwrap_or_default();
-
-            while let Some(next_uri) = self.results.next_uri.take() {
-                self._fetch_next_results(next_uri).await?;
-                yield self.results.data.take().unwrap_or_default();
+            while let Some(response) = self.next_response().await {
+                yield response?;
             }
         }
     }

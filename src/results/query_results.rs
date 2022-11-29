@@ -1,7 +1,6 @@
 use super::{Column, QueryError, QueryStats};
 use crate::utils::opt_uri_serde;
 use http::uri::Uri;
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -19,23 +18,6 @@ pub struct QueryResults<T> {
     pub data: Option<Vec<T>>,
     pub stats: QueryStats,
     pub error: Option<QueryError>,
-}
-
-impl<T> QueryResults<T>
-where
-    T: DeserializeOwned + Debug,
-{
-    pub fn rows(&self) -> Option<&[T]> {
-        self.data.as_deref()
-    }
-
-    pub fn rows_mut(&mut self) -> Option<&mut Vec<T>> {
-        self.data.as_mut()
-    }
-
-    pub fn rows_owned(self) -> Option<Vec<T>> {
-        self.data
-    }
 }
 
 #[cfg(test)]
@@ -113,7 +95,7 @@ mod tests {
 
     #[test]
     fn deserialize_basic_typed_row() {
-        #[derive(Deserialize, Debug)]
+        #[derive(Deserialize, Debug, PartialEq)]
         struct StructRow {
             a_int: i64,
             a_bool: bool,
@@ -121,12 +103,17 @@ mod tests {
 
         // let deserialized_raw: RawQueryResults = serde_json::from_str(BASE_RESULTS_STR).unwrap();
         // let deserialized_tuple: QueryResults<StructRow> = QueryResults::from(deserialized_raw.clone());
-        let deserialized_struct: QueryResults<StructRow> =
+        let mut deserialized_struct: QueryResults<StructRow> =
             serde_json::from_str(BASE_RESULTS_STR).unwrap();
         println!("deserialized_struct = {:?}", deserialized_struct);
-        let row = &deserialized_struct.rows().unwrap()[0];
-        assert_eq!(row.a_int, 123);
-        assert_eq!(row.a_bool, true);
+        let rows = deserialized_struct.data.take().unwrap();
+        assert_eq!(
+            rows,
+            vec![StructRow {
+                a_int: 123,
+                a_bool: true,
+            }]
+        );
     }
 
     #[test]
