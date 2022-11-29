@@ -1,5 +1,5 @@
-use crate::PrestinoError;
 use crate::results::QueryResults;
+use crate::PrestinoError;
 use hyper::body::HttpBody as _;
 use hyper::client::HttpConnector;
 use hyper::Client;

@@ -1,5 +1,5 @@
-use crate::PrestinoError;
 use crate::results::{Column, QueryError, QueryResults, QueryStats};
+use crate::PrestinoError;
 use crate::PrestoApi;
 use async_stream::try_stream;
 use futures::Stream;
