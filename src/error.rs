@@ -8,8 +8,8 @@ pub enum Error {
     StatusCodeError(u16),
     #[error("Could not parse JSON")]
     JsonParseError(#[from] serde_json::Error),
-    #[error("Query error {0:?}")]
-    QueryError(crate::results::QueryError),
+    #[error("Error in query")]
+    QueryError(#[from] crate::results::QueryError),
 }
 
 impl Error {
