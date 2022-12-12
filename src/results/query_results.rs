@@ -1,6 +1,4 @@
 use super::{Column, QueryError, QueryStats};
-use crate::utils::opt_uri_serde;
-use http::uri::Uri;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -8,12 +6,9 @@ use std::fmt::Debug;
 #[serde(rename_all = "camelCase")]
 pub struct QueryResults<T> {
     pub id: String,
-    #[serde(with = "http_serde::uri")]
-    pub info_uri: Uri,
-    #[serde(default, with = "opt_uri_serde")]
-    pub next_uri: Option<Uri>,
-    #[serde(default, with = "opt_uri_serde")]
-    pub partial_cancel_uri: Option<Uri>,
+    pub info_uri: String,
+    pub next_uri: Option<String>,
+    pub partial_cancel_uri: Option<String>,
     pub columns: Option<Vec<Column>>,
     pub data: Option<Vec<T>>,
     pub stats: QueryStats,

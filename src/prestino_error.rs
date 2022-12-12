@@ -1,9 +1,7 @@
 #[derive(thiserror::Error, Debug)]
 pub enum PrestinoError {
-    #[error("http error")]
-    HttpError(#[from] hyper::http::Error),
-    #[error("hyper error")]
-    HyperError(#[from] hyper::Error),
+    #[error("Reqwest error")]
+    HttpError(#[from] reqwest::Error),
     #[error("Unexpected HTTP response code {0}")]
     StatusCodeError(u16),
     #[error("Could not parse JSON")]

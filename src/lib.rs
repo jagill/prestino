@@ -3,7 +3,6 @@ mod presto_api;
 mod presto_client;
 pub mod results;
 mod statement_executor;
-mod utils;
 
 pub use prestino_error::PrestinoError;
 pub use presto_api::PrestoApi;

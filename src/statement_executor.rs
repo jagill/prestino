@@ -4,18 +4,17 @@ use crate::PrestoApi;
 use async_stream::try_stream;
 use futures::Stream;
 use futures_util::pin_mut;
-use hyper::client::HttpConnector;
-use hyper::{Client, Uri};
+use reqwest::Client;
 use serde::de::DeserializeOwned;
 
 pub struct StatementExecutor<T: DeserializeOwned> {
     id: String,
-    http_client: Client<HttpConnector>,
+    http_client: Client,
     results: QueryResults<T>,
 }
 
 impl<T: DeserializeOwned> StatementExecutor<T> {
-    pub fn new(http_client: Client<HttpConnector>, results: QueryResults<T>) -> Self {
+    pub fn new(http_client: Client, results: QueryResults<T>) -> Self {
         Self {
             id: results.id.clone(),
             http_client,
@@ -27,7 +26,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         &self.id
     }
 
-    pub fn info_uri(&self) -> &Uri {
+    pub fn info_uri(&self) -> &str {
         &self.results.info_uri
     }
 
@@ -35,7 +34,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         self.results.columns.as_deref()
     }
 
-    pub fn take_next_uri(&mut self) -> Option<Uri> {
+    pub fn take_next_uri(&mut self) -> Option<String> {
         self.results.next_uri.take()
     }
 
@@ -70,12 +69,8 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
             return None;
         };
 
-        let request = match PrestoApi::get_results_request(next_uri) {
-            Err(err) => return Some(Err(err)),
-            Ok(request) => request,
-        };
-
-        self.results = match PrestoApi::get_results(request, &self.http_client).await {
+        let request = PrestoApi::get_results_request(&self.http_client, &next_uri);
+        self.results = match PrestoApi::get_results(request).await {
             Err(err) => return Some(Err(err)),
             Ok(results) => results,
         };

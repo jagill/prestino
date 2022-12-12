@@ -1,6 +1,6 @@
 use crate::StatementExecutor;
 use crate::{PrestinoError, PrestoApi};
-use hyper::Client;
+use reqwest::Client;
 use serde::de::DeserializeOwned;
 
 #[derive(Debug, Clone)]
@@ -17,9 +17,10 @@ impl PrestoClient {
         &self,
         statement: String,
     ) -> Result<StatementExecutor<T>, PrestinoError> {
-        let request = PrestoApi::post_statement_request(&self.base_url, statement)?;
         let http_client = Client::new();
-        let results = PrestoApi::get_results(request, &http_client).await?;
+        let request = PrestoApi::post_statement_request(&http_client, &self.base_url, statement);
+
+        let results = PrestoApi::get_results(request).await?;
         return Ok(StatementExecutor::new(http_client, results));
     }
 }
