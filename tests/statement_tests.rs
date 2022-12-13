@@ -8,12 +8,12 @@ async fn test_create_select_delete_drop() {
     let client = PrestoClient::trino("http://localhost:8080".to_owned()).user("me");
 
     client
-        .rows_from::<()>("DROP TABLE IF EXISTS memory.default.my_table".to_string())
+        .execute_collect::<()>("DROP TABLE IF EXISTS memory.default.my_table".to_string())
         .await
         .unwrap();
 
     let rows: Vec<(i64,)> = client
-        .rows_from(
+        .execute_collect(
             r#"
     CREATE TABLE memory.default.my_table AS
     SELECT * FROM (
@@ -30,7 +30,7 @@ async fn test_create_select_delete_drop() {
     assert_eq!(rows, vec![(3i64,)]);
 
     let rows: Vec<(i64, String)> = client
-        .rows_from("SELECT id, name FROM memory.default.my_table".to_string())
+        .execute_collect("SELECT id, name FROM memory.default.my_table".to_string())
         .await
         .unwrap();
     assert_eq!(
@@ -43,7 +43,7 @@ async fn test_create_select_delete_drop() {
     );
 
     let rows: Vec<()> = client
-        .rows_from("DROP TABLE memory.default.my_table".to_string())
+        .execute_collect("DROP TABLE memory.default.my_table".to_string())
         .await
         .unwrap();
     assert_eq!(rows, Vec::new());

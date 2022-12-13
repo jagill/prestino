@@ -71,7 +71,7 @@ impl PrestoClient {
     }
 
     /// A convenience function to retrieve all the rows for the statement into a single Vec.
-    pub async fn rows_from<T: DeserializeOwned>(
+    pub async fn execute_collect<T: DeserializeOwned>(
         &self,
         statement: String,
     ) -> Result<Vec<T>, PrestinoError> {
