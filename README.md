@@ -41,3 +41,16 @@ for my_row in rows {
 ```
 
 It will also be able to be used as a CLI that is a drop-in replacement for the Presto/Trino CLI tool.
+
+## Testing
+
+To run the integration tests, or test your own library against a real Trino instance, use the
+supplied docker-compose file (this will be noisy, so do it in a separate terminal):
+
+```
+prestino$ docker compose up
+```
+
+This creates a Trino instance in a Docker container, accessible via localhost:8080.  It has an
+in-memory catalog, so you can create tables and select them, as well as a TPCH catalog to test
+against standardized data.

@@ -4,5 +4,5 @@ services:
       - "8080:8080"
     image: "trinodb/trino"
     volumes:
-      - ./docker/trino/etc:/usr/lib/trino/etc:ro
-      - ./docker/trino/catalog:/etc/trino/catalog
+      - ./test-resources/etc:/etc/trino
+      - ./test-resources/var:/var/trino
