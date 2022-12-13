@@ -16,7 +16,7 @@ async fn get_rows<T: DeserializeOwned>(response_strs: &[&str]) -> Result<Vec<T>,
     let responses = ResponseChain::new(response_strs, base_uri);
     responses.mock_flow(&mock_server).await;
 
-    let presto_client = PrestoClient::new(mock_server.uri());
+    let presto_client = PrestoClient::trino(mock_server.uri()).user("me");
     let executor = presto_client.execute("test".to_string()).await.unwrap();
 
     let stream = executor.rows();

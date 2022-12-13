@@ -1,18 +1,73 @@
 use crate::results::QueryResults;
-use crate::{PrestinoError, StatementExecutor};
+use crate::{Fork, PrestinoError, StatementExecutor};
 use futures::pin_mut;
 use futures::TryStreamExt;
+use reqwest::header::{HeaderMap, HeaderName};
 use reqwest::{Client, RequestBuilder};
 use serde::de::DeserializeOwned;
 
 #[derive(Debug, Clone)]
 pub struct PrestoClient {
+    fork: Fork,
     base_url: String,
+    headers: HeaderMap,
 }
 
 impl PrestoClient {
-    pub fn new(base_url: String) -> PrestoClient {
-        PrestoClient { base_url }
+    pub fn presto(base_url: String) -> Self {
+        Self {
+            fork: Fork::Presto,
+            base_url,
+            headers: HeaderMap::new(),
+        }
+    }
+
+    pub fn trino(base_url: String) -> Self {
+        Self {
+            fork: Fork::Trino,
+            base_url,
+            headers: HeaderMap::new(),
+        }
+    }
+
+    fn name_for(&self, name: &str) -> HeaderName {
+        HeaderName::try_from(self.fork.name_for(name)).unwrap()
+    }
+
+    /// Specifies the session user. If not supplied, the session user is automatically determined via [User mapping](https://trino.io/docs/current/security/user-mapping.html).
+    pub fn user(mut self, user: &str) -> Self {
+        self.headers.insert(
+            self.name_for("user"),
+            user.to_ascii_lowercase().parse().unwrap(),
+        );
+        self
+    }
+
+    /// For reporting purposes, this supplies the name of the software that submitted the query.
+    pub fn source(mut self, source: &str) -> Self {
+        self.headers.insert(
+            self.name_for("source"),
+            source.to_ascii_lowercase().parse().unwrap(),
+        );
+        self
+    }
+
+    /// Supplies a trace token to the Trino engine to help identify log lines that originate with this query request.
+    pub fn trace_token(mut self, trace_token: &str) -> Self {
+        self.headers.insert(
+            self.name_for("trace-token"),
+            trace_token.to_ascii_lowercase().parse().unwrap(),
+        );
+        self
+    }
+
+    /// Contains arbitrary information about the client program submitting the query.
+    pub fn client_info(mut self, client_info: &str) -> Self {
+        self.headers.insert(
+            self.name_for("client-info"),
+            client_info.to_ascii_lowercase().parse().unwrap(),
+        );
+        self
     }
 
     /// A convenience function to retrieve all the rows for the statement into a single Vec.
@@ -39,7 +94,7 @@ impl PrestoClient {
         let http_client = Client::new();
         let request = http_client
             .post(format!("{}/v1/statement", self.base_url))
-            .header("X-Trino-User", "jagill")
+            .headers(self.headers.clone())
             .body(statement);
 
         let results = Self::get_results(request).await?;
@@ -53,10 +108,7 @@ impl PrestoClient {
         let status = response.status();
         if status != reqwest::StatusCode::OK {
             let message = response.text().await?;
-            return Err(PrestinoError::from_status_code(
-                status.as_u16(),
-                message,
-            ));
+            return Err(PrestinoError::from_status_code(status.as_u16(), message));
         }
         // TODO: Make better error messages on json deser.  In particular, if there's a type error,
         // can we print out the row that causes the error?

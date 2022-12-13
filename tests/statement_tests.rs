@@ -5,7 +5,7 @@ async fn test_create_select_delete_drop() {
     // Do a full loop of creating a table with data, selecting from it,
     // deleting rows, and dropping the table
 
-    let client = PrestoClient::new("http://localhost:8080".to_owned());
+    let client = PrestoClient::trino("http://localhost:8080".to_owned()).user("me");
 
     client
         .rows_from::<()>("DROP TABLE IF EXISTS memory.default.my_table".to_string())

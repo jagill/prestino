@@ -1,3 +1,6 @@
+use crate::Fork;
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+
 pub enum Header {
     User(String),
     Source(String),

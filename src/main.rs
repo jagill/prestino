@@ -31,7 +31,7 @@ impl Outputter {
 }
 
 async fn run(host: &str, query: &str, stream_mode: StreamMode) -> Result<(), anyhow::Error> {
-    let client = PrestoClient::new(host.to_owned());
+    let client = PrestoClient::trino(host.to_owned()).user("jagill");
     let executor = client.execute(query.to_owned()).await?;
     let outputter = Outputter {};
 
