@@ -2,8 +2,8 @@
 pub enum PrestinoError {
     #[error("Http error")]
     HttpError(#[from] reqwest::Error),
-    #[error("Unexpected HTTP response code {0}")]
-    StatusCodeError(u16),
+    #[error("Unexpected HTTP response code {0}: {1}")]
+    StatusCodeError(u16, String),
     #[error("Could not parse JSON")]
     JsonParseError(#[from] serde_json::Error),
     #[error("Error in query")]
@@ -11,7 +11,7 @@ pub enum PrestinoError {
 }
 
 impl PrestinoError {
-    pub fn from_status_code(code: u16) -> Self {
-        PrestinoError::StatusCodeError(code)
+    pub fn from_status_code(code: u16, message: String) -> Self {
+        PrestinoError::StatusCodeError(code, message)
     }
 }
