@@ -1,6 +1,6 @@
 #[derive(thiserror::Error, Debug)]
 pub enum PrestinoError {
-    #[error("Reqwest error")]
+    #[error("Http error")]
     HttpError(#[from] reqwest::Error),
     #[error("Unexpected HTTP response code {0}")]
     StatusCodeError(u16),
