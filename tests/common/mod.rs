@@ -1,10 +1,10 @@
 use futures::TryStreamExt;
 use futures_util::pin_mut;
-use prestino::{PrestinoError, PrestoClient};
+use prestino::{PrestinoError, PrestinoClient};
 use serde::de::DeserializeOwned;
 
 pub async fn get_rows<T: DeserializeOwned>(sql: &str) -> Result<Vec<T>, PrestinoError> {
-    let client = PrestoClient::trino("http://localhost:8080".to_owned()).user("me");
+    let client = PrestinoClient::trino("http://localhost:8080".to_owned()).user("me");
     let executor = client.execute(sql.to_string()).await?;
     let stream = executor.rows();
     pin_mut!(stream);

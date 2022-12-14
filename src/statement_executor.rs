@@ -1,5 +1,5 @@
 use crate::results::{Column, QueryError, QueryResults, QueryStats};
-use crate::{PrestinoError, PrestoClient};
+use crate::{PrestinoError, PrestinoClient};
 use async_stream::try_stream;
 use futures::Stream;
 use futures_util::pin_mut;
@@ -68,8 +68,8 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
             return None;
         };
 
-        let request = PrestoClient::get_results_request(&self.http_client, &next_uri);
-        self.results = match PrestoClient::get_results(request).await {
+        let request = PrestinoClient::get_results_request(&self.http_client, &next_uri);
+        self.results = match PrestinoClient::get_results(request).await {
             Err(err) => return Some(Err(err)),
             Ok(results) => results,
         };

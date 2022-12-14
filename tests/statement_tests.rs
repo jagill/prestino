@@ -1,11 +1,11 @@
-use prestino::PrestoClient;
+use prestino::PrestinoClient;
 
 #[tokio::test]
 async fn test_create_select_delete_drop() {
     // Do a full loop of creating a table with data, selecting from it,
     // deleting rows, and dropping the table
 
-    let client = PrestoClient::trino("http://localhost:8080".to_owned()).user("me");
+    let client = PrestinoClient::trino("http://localhost:8080".to_owned()).user("me");
 
     client
         .execute_collect::<()>("DROP TABLE IF EXISTS memory.default.my_table".to_string())

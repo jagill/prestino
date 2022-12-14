@@ -7,13 +7,13 @@ use reqwest::{Client, RequestBuilder};
 use serde::de::DeserializeOwned;
 
 #[derive(Debug, Clone)]
-pub struct PrestoClient {
+pub struct PrestinoClient {
     fork: Fork,
     base_url: String,
     headers: HeaderMap,
 }
 
-impl PrestoClient {
+impl PrestinoClient {
     pub fn presto(base_url: String) -> Self {
         Self {
             fork: Fork::Presto,

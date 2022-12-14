@@ -1,6 +1,6 @@
 use futures::StreamExt;
 use futures_util::pin_mut;
-use prestino::PrestoClient;
+use prestino::PrestinoClient;
 use serde_json::Value;
 use tokio::io::AsyncWriteExt as _;
 
@@ -31,7 +31,7 @@ impl Outputter {
 }
 
 async fn run(host: &str, query: &str, stream_mode: StreamMode) -> Result<(), anyhow::Error> {
-    let client = PrestoClient::trino(host.to_owned()).user("jagill");
+    let client = PrestinoClient::trino(host.to_owned()).user("jagill");
     let executor = client.execute(query.to_owned()).await?;
     let outputter = Outputter {};
 
