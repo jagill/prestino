@@ -3,7 +3,7 @@ use crate::{Fork, PrestinoError, StatementExecutor};
 use futures::pin_mut;
 use futures::TryStreamExt;
 use reqwest::header::{HeaderMap, HeaderName};
-use reqwest::{Client, RequestBuilder};
+use reqwest::{Client, Request, Response};
 use serde::de::DeserializeOwned;
 
 #[derive(Debug, Clone)]
@@ -11,6 +11,7 @@ pub struct PrestinoClient {
     fork: Fork,
     base_url: String,
     headers: HeaderMap,
+    http_client: Client,
 }
 
 impl PrestinoClient {
@@ -19,6 +20,7 @@ impl PrestinoClient {
             fork: Fork::Presto,
             base_url,
             headers: HeaderMap::new(),
+            http_client: Client::new(),
         }
     }
 
@@ -27,14 +29,19 @@ impl PrestinoClient {
             fork: Fork::Trino,
             base_url,
             headers: HeaderMap::new(),
+            http_client: Client::new(),
         }
     }
 
     fn name_for(&self, name: &str) -> HeaderName {
+        // Since we control the input, we can ensure that it is always visible ASCII
         HeaderName::try_from(self.fork.name_for(name)).unwrap()
     }
 
-    /// Specifies the session user. If not supplied, the session user is automatically determined via [User mapping](https://trino.io/docs/current/security/user-mapping.html).
+    /// Specifies the session user. If not supplied, the session user is
+    /// automatically determined via [User mapping](https://trino.io/docs/current/security/user-mapping.html).
+    /// The `user` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
     pub fn user(mut self, user: &str) -> Self {
         self.headers.insert(
             self.name_for("user"),
@@ -43,7 +50,10 @@ impl PrestinoClient {
         self
     }
 
-    /// For reporting purposes, this supplies the name of the software that submitted the query.
+    /// For reporting purposes, this supplies the name of the software that
+    /// submitted the query.
+    /// The `source` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
     pub fn source(mut self, source: &str) -> Self {
         self.headers.insert(
             self.name_for("source"),
@@ -52,7 +62,10 @@ impl PrestinoClient {
         self
     }
 
-    /// Supplies a trace token to the Trino engine to help identify log lines that originate with this query request.
+    /// Supplies a trace token to the Trino engine to help identify log lines
+    /// that originate with this query request.
+    /// The `trace_token` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
     pub fn trace_token(mut self, trace_token: &str) -> Self {
         self.headers.insert(
             self.name_for("trace-token"),
@@ -62,6 +75,8 @@ impl PrestinoClient {
     }
 
     /// Contains arbitrary information about the client program submitting the query.
+    /// The `client_info` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
     pub fn client_info(mut self, client_info: &str) -> Self {
         self.headers.insert(
             self.name_for("client-info"),
@@ -91,33 +106,53 @@ impl PrestinoClient {
         &self,
         statement: String,
     ) -> Result<StatementExecutor<T>, PrestinoError> {
-        let http_client = Client::new();
-        let request = http_client
+        let request = self
+            .http_client
             .post(format!("{}/v1/statement", self.base_url))
             .headers(self.headers.clone())
-            .body(statement);
+            .body(statement)
+            .build()?;
 
-        let results = Self::get_results(request).await?;
-        return Ok(StatementExecutor::new(http_client, results));
+        // Receiving the response may alter this client's headers.  Use a clone instead.
+        let mut this_client = self.clone();
+        let results = this_client.get_results(request).await?;
+        Ok(StatementExecutor {
+            id: results.id.clone(),
+            client: this_client,
+            results,
+        })
     }
 
     pub async fn get_results<T: DeserializeOwned>(
-        request: RequestBuilder,
+        &mut self,
+        request: Request,
     ) -> Result<QueryResults<T>, PrestinoError> {
-        let response = request.send().await?;
+        let response = self.http_client.execute(request).await?;
+        self.parse_response(response).await
+    }
+
+    async fn parse_response<T: DeserializeOwned>(
+        &mut self,
+        response: Response,
+    ) -> Result<QueryResults<T>, PrestinoError> {
         let status = response.status();
         if status != reqwest::StatusCode::OK {
             let message = response.text().await?;
             return Err(PrestinoError::from_status_code(status.as_u16(), message));
         }
+        // TODO: Parse response headers to modify client's headers
         // TODO: Make better error messages on json deser.  In particular, if there's a type error,
         // can we print out the row that causes the error?
         Ok(response.json().await?)
     }
 
-    pub fn get_results_request(client: &Client, next_uri: &str) -> RequestBuilder {
+    pub fn get_results_request(&self, next_uri: &str) -> Result<Request, PrestinoError> {
         println!("Getting next results: {}", next_uri);
-        let request = client.get(next_uri).header("X-Trino-User", "jagill");
-        request
+        let request = self
+            .http_client
+            .get(next_uri)
+            .headers(self.headers.clone())
+            .build()?;
+        Ok(request)
     }
 }

@@ -1,10 +1,10 @@
-mod prestino_error;
 mod prestino_client;
+mod prestino_error;
 pub mod results;
 mod statement_executor;
 
-pub use prestino_error::PrestinoError;
 pub use prestino_client::PrestinoClient;
+pub use prestino_error::PrestinoError;
 pub use statement_executor::StatementExecutor;
 
 #[derive(Copy, Clone, Debug, PartialEq)]

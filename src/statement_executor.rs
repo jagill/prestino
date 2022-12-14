@@ -1,26 +1,17 @@
-use crate::results::{Column, QueryError, QueryResults, QueryStats};
-use crate::{PrestinoError, PrestinoClient};
+use crate::results::{Column, QueryResults, QueryStats};
+use crate::{PrestinoClient, PrestinoError};
 use async_stream::try_stream;
 use futures::Stream;
 use futures_util::pin_mut;
-use reqwest::Client;
 use serde::de::DeserializeOwned;
 
 pub struct StatementExecutor<T: DeserializeOwned> {
-    id: String,
-    http_client: Client,
-    results: QueryResults<T>,
+    pub(crate) id: String,
+    pub(crate) client: PrestinoClient,
+    pub(crate) results: QueryResults<T>,
 }
 
 impl<T: DeserializeOwned> StatementExecutor<T> {
-    pub fn new(http_client: Client, results: QueryResults<T>) -> Self {
-        Self {
-            id: results.id.clone(),
-            http_client,
-            results,
-        }
-    }
-
     pub fn id(&self) -> &str {
         &self.id
     }
@@ -33,49 +24,34 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         self.results.columns.as_deref()
     }
 
-    pub fn take_next_uri(&mut self) -> Option<String> {
-        self.results.next_uri.take()
-    }
-
-    pub fn take_data(&mut self) -> Option<Vec<T>> {
-        self.results.data.take()
-    }
-
-    pub fn take_error(&mut self) -> Option<QueryError> {
-        self.results.error.take()
-    }
-
     pub fn stats(&self) -> &QueryStats {
         &self.results.stats
     }
 
-    pub fn take_result(&mut self) -> Option<Result<Vec<T>, PrestinoError>> {
-        if let Some(err) = self.take_error() {
-            Some(Err(err.into()))
-        } else if let Some(rows) = self.take_data() {
-            Some(Ok(rows))
-        } else {
-            None
-        }
-    }
-
     pub async fn next_response(&mut self) -> Option<Result<Vec<T>, PrestinoError>> {
-        if let Some(result) = self.take_result() {
-            return Some(result);
+        // Clear out any data that we've saved.
+        if let Some(err) = self.results.error.take() {
+            return Some(Err(err.into()));
+        } else if let Some(rows) = self.results.data.take() {
+            return Some(Ok(rows));
         }
 
-        let Some(next_uri) = self.take_next_uri() else {
-            return None;
+        // If there is no next_uri, we have finished iteration.
+        let next_uri = self.results.next_uri.take()?;
+        let request = match self.client.get_results_request(&next_uri) {
+            Err(err) => return Some(Err(err)),
+            Ok(req) => req,
         };
-
-        let request = PrestinoClient::get_results_request(&self.http_client, &next_uri);
-        self.results = match PrestinoClient::get_results(request).await {
+        self.results = match self.client.get_results(request).await {
             Err(err) => return Some(Err(err)),
             Ok(results) => results,
         };
 
-        // Return an empty vec as a placeholder meaning "try again"
-        Some(Ok(Vec::new()))
+        if let Some(err) = self.results.error.take() {
+            return Some(Err(err.into()));
+        }
+        let rows = self.results.data.take().unwrap_or(Vec::new());
+        Some(Ok(rows))
     }
 
     pub fn responses(mut self) -> impl Stream<Item = Result<Vec<T>, PrestinoError>> {

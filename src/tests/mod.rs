@@ -1,7 +1,7 @@
 mod response_chain;
 mod response_set_1;
 
-use crate::{PrestinoError, PrestinoClient};
+use crate::{PrestinoClient, PrestinoError};
 use futures::TryStreamExt;
 use futures_util::pin_mut;
 use response_chain::ResponseChain;
