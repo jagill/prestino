@@ -8,6 +8,8 @@ pub enum PrestinoError {
     JsonParseError(#[from] serde_json::Error),
     #[error("Error in query")]
     QueryError(#[from] crate::results::QueryError),
+    #[error("Query {0} already finished")]
+    QueryFinishedError(String),
 }
 
 impl PrestinoError {

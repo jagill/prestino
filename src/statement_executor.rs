@@ -28,6 +28,18 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         &self.results.stats
     }
 
+    /// Cancel execution of this statement.  If the query is already finished,
+    /// return PrestinoError::QueryFinishedError with the query id.
+    pub async fn cancel(mut self) -> Result<(), PrestinoError> {
+        let Some(next_uri) = self.results.next_uri.take() else {
+            return Err(PrestinoError::QueryFinishedError(self.id().to_owned()));
+        };
+
+        // TODO: If this is an HTTP error, we should probably try again, or at least
+        // allow the caller to try again.
+        self.client.cancel(&next_uri).await
+    }
+
     pub async fn next_response(&mut self) -> Option<Result<Vec<T>, PrestinoError>> {
         // Clear out any data that we've saved.
         if let Some(err) = self.results.error.take() {
