@@ -1,3 +1,4 @@
+mod client_connection;
 mod prestino_client;
 mod prestino_error;
 pub mod results;

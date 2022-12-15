@@ -1,9 +1,9 @@
-use crate::results::QueryResults;
+use crate::client_connection::ClientConnection;
 use crate::{Fork, PrestinoError, StatementExecutor};
 use futures::pin_mut;
 use futures::TryStreamExt;
 use reqwest::header::{HeaderMap, HeaderName};
-use reqwest::{Client, Request, Response};
+use reqwest::Client;
 use serde::de::DeserializeOwned;
 
 #[derive(Debug, Clone)]
@@ -106,64 +106,17 @@ impl PrestinoClient {
         &self,
         statement: String,
     ) -> Result<StatementExecutor<T>, PrestinoError> {
-        let request = self
-            .http_client
-            .post(format!("{}/v1/statement", self.base_url))
-            .headers(self.headers.clone())
-            .body(statement)
-            .build()?;
+        let mut connection = ClientConnection {
+            headers: self.headers.clone(),
+            http_client: self.http_client.clone(),
+        };
 
-        // Receiving the response may alter this client's headers.  Use a clone instead.
-        let mut this_client = self.clone();
-        let results = this_client.get_results(request).await?;
+        let results = connection.post_statement(&self.base_url, statement).await?;
+
         Ok(StatementExecutor {
             id: results.id.clone(),
-            client: this_client,
+            connection,
             results,
         })
-    }
-
-    pub async fn get_results<T: DeserializeOwned>(
-        &mut self,
-        request: Request,
-    ) -> Result<QueryResults<T>, PrestinoError> {
-        let response = self.http_client.execute(request).await?;
-        self.parse_response(response).await
-    }
-
-    async fn parse_response<T: DeserializeOwned>(
-        &mut self,
-        response: Response,
-    ) -> Result<QueryResults<T>, PrestinoError> {
-        let status = response.status();
-        if status != reqwest::StatusCode::OK {
-            let message = response.text().await?;
-            return Err(PrestinoError::from_status_code(status.as_u16(), message));
-        }
-        // TODO: Parse response headers to modify client's headers
-        // TODO: Make better error messages on json deser.  In particular, if there's a type error,
-        // can we print out the row that causes the error?
-        Ok(response.json().await?)
-    }
-
-    pub fn get_results_request(&self, next_uri: &str) -> Result<Request, PrestinoError> {
-        println!("Getting next results: {}", next_uri);
-        let request = self
-            .http_client
-            .get(next_uri)
-            .headers(self.headers.clone())
-            .build()?;
-        Ok(request)
-    }
-
-    pub async fn cancel(&mut self, next_uri: &str) -> Result<(), PrestinoError> {
-        let response = self
-            .http_client
-            .delete(next_uri)
-            .headers(self.headers.clone())
-            .send()
-            .await?;
-
-        self.parse_response::<()>(response).await.map(|_| ())
     }
 }

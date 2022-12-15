@@ -1,5 +1,6 @@
+use crate::client_connection::ClientConnection;
 use crate::results::{Column, QueryResults, QueryStats};
-use crate::{PrestinoClient, PrestinoError};
+use crate::PrestinoError;
 use async_stream::try_stream;
 use futures::Stream;
 use futures_util::pin_mut;
@@ -7,7 +8,7 @@ use serde::de::DeserializeOwned;
 
 pub struct StatementExecutor<T: DeserializeOwned> {
     pub(crate) id: String,
-    pub(crate) client: PrestinoClient,
+    pub(crate) connection: ClientConnection,
     pub(crate) results: QueryResults<T>,
 }
 
@@ -37,7 +38,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
 
         // TODO: If this is an HTTP error, we should probably try again, or at least
         // allow the caller to try again.
-        self.client.cancel(&next_uri).await
+        self.connection.cancel(&next_uri).await
     }
 
     pub async fn next_response(&mut self) -> Option<Result<Vec<T>, PrestinoError>> {
@@ -50,11 +51,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
 
         // If there is no next_uri, we have finished iteration.
         let next_uri = self.results.next_uri.take()?;
-        let request = match self.client.get_results_request(&next_uri) {
-            Err(err) => return Some(Err(err)),
-            Ok(req) => req,
-        };
-        self.results = match self.client.get_results(request).await {
+        self.results = match self.connection.get_next_results(&next_uri).await {
             Err(err) => return Some(Err(err)),
             Ok(results) => results,
         };
