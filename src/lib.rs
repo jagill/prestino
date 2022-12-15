@@ -6,6 +6,7 @@ mod statement_executor;
 
 pub use prestino_client::PrestinoClient;
 pub use prestino_error::PrestinoError;
+pub use results::QueryStats;
 pub use statement_executor::StatementExecutor;
 
 #[derive(Copy, Clone, Debug, PartialEq)]

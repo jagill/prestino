@@ -63,10 +63,10 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         Some(Ok(rows))
     }
 
-    pub fn responses(mut self) -> impl Stream<Item = Result<Vec<T>, PrestinoError>> {
+    pub fn responses(mut self) -> impl Stream<Item = Result<(Vec<T>, QueryStats), PrestinoError>> {
         try_stream! {
             while let Some(response) = self.next_response().await {
-                yield response?;
+                yield (response?, self.results.stats.clone());
             }
         }
     }
@@ -76,7 +76,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
             let query_results = self.responses();
             pin_mut!(query_results);
             for await rows_result in query_results {
-                let rows = rows_result?;
+                let rows = rows_result?.0;
                 if !rows.is_empty() {
                     yield rows;
                 }

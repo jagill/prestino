@@ -1,6 +1,6 @@
 use futures::StreamExt;
 use futures_util::pin_mut;
-use prestino::PrestinoClient;
+use prestino::{PrestinoClient, StatementExecutor};
 use serde_json::Value;
 use tokio::io::AsyncWriteExt as _;
 
@@ -25,44 +25,45 @@ enum StreamMode {
 struct Outputter {}
 
 impl Outputter {
-    pub fn output(&self, val: &Value) {
-        println!(">>> Row {:?}", val);
+    pub fn output(&self, kind: &str, val: impl std::fmt::Debug) {
+        println!(">>> {} {:?}", kind, val);
     }
 }
 
 async fn run(host: &str, query: &str, stream_mode: StreamMode) -> Result<(), anyhow::Error> {
     let client = PrestinoClient::trino(host.to_owned()).user("jagill");
-    let executor = client.execute(query.to_owned()).await?;
+    let executor: StatementExecutor<Value> = client.execute(query.to_owned()).await?;
     let outputter = Outputter {};
 
     match stream_mode {
         StreamMode::Response => {
-            println!("Iterate responses");
+            println!(">>> Iterate responses");
             let stream = executor.responses();
             pin_mut!(stream);
-            while let Some(items) = stream.next().await {
-                for item in items? {
-                    outputter.output(&item);
+            while let Some(response_res) = stream.next().await {
+                let (rows, stats) = response_res?;
+                outputter.output("STATS ", stats);
+                for row in rows {
+                    outputter.output("ROW ", row);
                 }
             }
         }
         StreamMode::Batch => {
-            println!("Iterate batches");
+            println!(">>> Iterate batches");
             let stream = executor.batches();
             pin_mut!(stream);
             while let Some(items) = stream.next().await {
                 for item in items? {
-                    outputter.output(&item);
+                    outputter.output("ROW", &item);
                 }
             }
         }
         StreamMode::Row => {
-            println!("Iterate rows");
-            let executor = client.execute(query.to_owned()).await?;
+            println!(">>> Iterate rows");
             let stream = executor.rows();
             pin_mut!(stream);
             while let Some(item) = stream.next().await {
-                outputter.output(&item?);
+                outputter.output("ROW", &item?);
             }
         }
     }
