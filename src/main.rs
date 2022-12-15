@@ -37,7 +37,7 @@ async fn run(host: &str, query: &str, stream_mode: StreamMode) -> Result<(), any
 
     match stream_mode {
         StreamMode::Response => {
-            println!(">>> Iterate responses");
+            println!(">> Iterate responses");
             let stream = executor.responses();
             pin_mut!(stream);
             while let Some(response_res) = stream.next().await {
@@ -49,7 +49,7 @@ async fn run(host: &str, query: &str, stream_mode: StreamMode) -> Result<(), any
             }
         }
         StreamMode::Batch => {
-            println!(">>> Iterate batches");
+            println!(">> Iterate batches");
             let stream = executor.batches();
             pin_mut!(stream);
             while let Some(items) = stream.next().await {
@@ -59,7 +59,7 @@ async fn run(host: &str, query: &str, stream_mode: StreamMode) -> Result<(), any
             }
         }
         StreamMode::Row => {
-            println!(">>> Iterate rows");
+            println!(">> Iterate rows");
             let stream = executor.rows();
             pin_mut!(stream);
             while let Some(item) = stream.next().await {

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
+async-std = "1.12"
 async-stream = "0.3"
 futures = "0.3"
 futures-util = "0.3"

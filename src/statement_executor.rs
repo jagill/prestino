@@ -5,14 +5,24 @@ use async_stream::try_stream;
 use futures::Stream;
 use futures_util::pin_mut;
 use serde::de::DeserializeOwned;
+use std::time::{Duration, Instant};
 
 pub struct StatementExecutor<T: DeserializeOwned> {
-    pub(crate) id: String,
-    pub(crate) connection: ClientConnection,
-    pub(crate) results: QueryResults<T>,
+    id: String,
+    connection: ClientConnection,
+    results: QueryResults<T>,
+    next_run_time: Instant,
 }
 
 impl<T: DeserializeOwned> StatementExecutor<T> {
+    pub(crate) fn new(id: String, connection: ClientConnection, results: QueryResults<T>) -> Self {
+        Self {
+            id,
+            connection,
+            results,
+            next_run_time: Instant::now(),
+        }
+    }
     pub fn id(&self) -> &str {
         &self.id
     }
@@ -49,9 +59,21 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
             return Some(Ok(rows));
         }
 
+        if let Some(delta) = self.next_run_time.checked_duration_since(Instant::now()) {
+            // We still need to wait before we can call again
+            async_std::task::sleep(delta).await;
+        }
+
         // If there is no next_uri, we have finished iteration.
         let next_uri = self.results.next_uri.take()?;
         self.results = match self.connection.get_next_results(&next_uri).await {
+            Err(PrestinoError::StatusCodeError(503, _)) => {
+                // Server is overloaded and needs 100ms:
+                // https://trino.io/docs/current/develop/client-protocol.html#overview-of-query-processing
+                self.bump_next_run_time();
+                self.results.next_uri = Some(next_uri);
+                return Some(Ok(Vec::new()));
+            }
             Err(err) => return Some(Err(err)),
             Ok(results) => results,
         };
@@ -59,8 +81,23 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
         if let Some(err) = self.results.error.take() {
             return Some(Err(err.into()));
         }
-        let rows = self.results.data.take().unwrap_or(Vec::new());
+        let rows = match self.results.data.take() {
+            Some(r) => {
+                if r.is_empty() {
+                    self.bump_next_run_time();
+                }
+                r
+            }
+            None => {
+                self.bump_next_run_time();
+                Vec::new()
+            }
+        };
         Some(Ok(rows))
+    }
+
+    fn bump_next_run_time(&mut self) {
+        self.next_run_time = Instant::now() + Duration::from_millis(100);
     }
 
     pub fn responses(mut self) -> impl Stream<Item = Result<(Vec<T>, QueryStats), PrestinoError>> {

@@ -20,4 +20,5 @@ pub struct QueryStats {
     pub physical_input_bytes: u32,
     pub peak_memory_bytes: u32,
     pub spilled_bytes: u32,
+    pub progress_percentage: Option<f32>,
 }

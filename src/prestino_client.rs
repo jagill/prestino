@@ -113,10 +113,10 @@ impl PrestinoClient {
 
         let results = connection.post_statement(&self.base_url, statement).await?;
 
-        Ok(StatementExecutor {
-            id: results.id.clone(),
+        Ok(StatementExecutor::new(
+            results.id.clone(),
             connection,
             results,
-        })
+        ))
     }
 }
