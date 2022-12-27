@@ -1,87 +1,49 @@
 use crate::client_connection::ClientConnection;
-use crate::{Fork, PrestinoError, StatementExecutor};
+use crate::headers::Headers;
+use crate::{PrestinoError, StatementExecutor};
 use futures::pin_mut;
 use futures::TryStreamExt;
-use reqwest::header::{HeaderMap, HeaderName};
 use reqwest::Client;
 use serde::de::DeserializeOwned;
 
 #[derive(Debug, Clone)]
 pub struct PrestinoClient {
-    fork: Fork,
     base_url: String,
-    headers: HeaderMap,
+    headers: Headers,
     http_client: Client,
 }
 
 impl PrestinoClient {
+    /// Create a Presto client with no headers set.
     pub fn presto(base_url: impl Into<String>) -> Self {
-        Self {
-            fork: Fork::Presto,
-            base_url: base_url.into(),
-            headers: HeaderMap::new(),
-            http_client: Client::new(),
-        }
+        Self::with_headers(base_url, Headers::presto())
     }
 
+    /// Create a Trino client with no headers set.
     pub fn trino(base_url: impl Into<String>) -> Self {
+        Self::with_headers(base_url, Headers::trino())
+    }
+
+    /// Create a client with the headers set.  The headers fork will determine the client's fork.
+    pub fn with_headers(base_url: impl Into<String>, headers: Headers) -> Self {
         Self {
-            fork: Fork::Trino,
             base_url: base_url.into(),
-            headers: HeaderMap::new(),
+            headers,
             http_client: Client::new(),
         }
     }
 
-    fn name_for(&self, name: &str) -> HeaderName {
-        // Since we control the input, we can ensure that it is always visible ASCII
-        HeaderName::try_from(self.fork.name_for(name)).unwrap()
+    pub fn headers(&self) -> &Headers {
+        &self.headers
     }
 
-    /// Specifies the session user. If not supplied, the session user is
-    /// automatically determined via [User mapping](https://trino.io/docs/current/security/user-mapping.html).
-    /// The `user` field must only contain visible ASCII characters (32-127);
-    /// otherwise this function will panic.
+    pub fn headers_mut(&mut self) -> &Headers {
+        &mut self.headers
+    }
+
+    /// Convenience function to set the user header.  Not needed if it's already set.
     pub fn user(mut self, user: &str) -> Self {
-        self.headers.insert(
-            self.name_for("user"),
-            user.to_ascii_lowercase().parse().unwrap(),
-        );
-        self
-    }
-
-    /// For reporting purposes, this supplies the name of the software that
-    /// submitted the query.
-    /// The `source` field must only contain visible ASCII characters (32-127);
-    /// otherwise this function will panic.
-    pub fn source(mut self, source: &str) -> Self {
-        self.headers.insert(
-            self.name_for("source"),
-            source.to_ascii_lowercase().parse().unwrap(),
-        );
-        self
-    }
-
-    /// Supplies a trace token to the Trino engine to help identify log lines
-    /// that originate with this query request.
-    /// The `trace_token` field must only contain visible ASCII characters (32-127);
-    /// otherwise this function will panic.
-    pub fn trace_token(mut self, trace_token: &str) -> Self {
-        self.headers.insert(
-            self.name_for("trace-token"),
-            trace_token.to_ascii_lowercase().parse().unwrap(),
-        );
-        self
-    }
-
-    /// Contains arbitrary information about the client program submitting the query.
-    /// The `client_info` field must only contain visible ASCII characters (32-127);
-    /// otherwise this function will panic.
-    pub fn client_info(mut self, client_info: &str) -> Self {
-        self.headers.insert(
-            self.name_for("client-info"),
-            client_info.to_ascii_lowercase().parse().unwrap(),
-        );
+        self.headers.set_user(user);
         self
     }
 

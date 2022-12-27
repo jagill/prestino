@@ -10,10 +10,30 @@ pub enum PrestinoError {
     QueryError(#[from] crate::results::QueryError),
     #[error("Query {0} already finished")]
     QueryFinishedError(String),
+    #[error("Header names and values must only contain visible ASCII characters")]
+    HeaderParseError,
 }
 
 impl PrestinoError {
     pub fn from_status_code(code: u16, message: String) -> Self {
         PrestinoError::StatusCodeError(code, message)
+    }
+}
+
+impl From<reqwest::header::ToStrError> for PrestinoError {
+    fn from(_err: reqwest::header::ToStrError) -> Self {
+        PrestinoError::HeaderParseError
+    }
+}
+
+impl From<reqwest::header::InvalidHeaderName> for PrestinoError {
+    fn from(_err: reqwest::header::InvalidHeaderName) -> Self {
+        PrestinoError::HeaderParseError
+    }
+}
+
+impl From<reqwest::header::InvalidHeaderValue> for PrestinoError {
+    fn from(_err: reqwest::header::InvalidHeaderValue) -> Self {
+        PrestinoError::HeaderParseError
     }
 }

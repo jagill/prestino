@@ -1,12 +1,11 @@
 use crate::results::QueryResults;
-use crate::PrestinoError;
-use reqwest::header::HeaderMap;
+use crate::{Headers, PrestinoError};
 use reqwest::{Client, Response};
 use serde::de::DeserializeOwned;
 
 #[derive(Debug)]
 pub(crate) struct ClientConnection {
-    pub(crate) headers: HeaderMap,
+    pub(crate) headers: Headers,
     pub(crate) http_client: Client,
 }
 
@@ -20,7 +19,7 @@ impl ClientConnection {
         let response = self
             .http_client
             .post(format!("{}/v1/statement", base_url))
-            .headers(self.headers.clone())
+            .headers(self.headers.build()?)
             .body(statement.into())
             .send()
             .await?;
@@ -36,7 +35,7 @@ impl ClientConnection {
         let response = self
             .http_client
             .get(next_uri)
-            .headers(self.headers.clone())
+            .headers(self.headers.build()?)
             .send()
             .await?;
         self.parse_response(response).await
@@ -51,7 +50,8 @@ impl ClientConnection {
             let message = response.text().await?;
             return Err(PrestinoError::from_status_code(status.as_u16(), message));
         }
-        // TODO: Parse response headers to modify client's headers
+        self.headers
+            .update_from_response_headers(response.headers())?;
         // TODO: Make better error messages on json deser.  In particular, if there's a type error,
         // can we print out the row that causes the error?
         Ok(response.json().await?)
@@ -61,7 +61,7 @@ impl ClientConnection {
         let response = self
             .http_client
             .delete(next_uri)
-            .headers(self.headers.clone())
+            .headers(self.headers.build()?)
             .send()
             .await?;
 

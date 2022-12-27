@@ -1,9 +1,11 @@
 mod client_connection;
+mod headers;
 mod prestino_client;
 mod prestino_error;
 pub mod results;
 mod statement_executor;
 
+pub use headers::Headers;
 pub use prestino_client::PrestinoClient;
 pub use prestino_error::PrestinoError;
 pub use results::QueryStats;

@@ -2,8 +2,6 @@ mod response_chain;
 mod response_set_1;
 
 use crate::{PrestinoClient, PrestinoError};
-use futures::TryStreamExt;
-use futures_util::pin_mut;
 use response_chain::ResponseChain;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
@@ -17,12 +15,7 @@ async fn get_rows<T: DeserializeOwned>(response_strs: &[&str]) -> Result<Vec<T>,
     responses.mock_flow(&mock_server).await;
 
     let presto_client = PrestinoClient::trino(mock_server.uri()).user("me");
-    let executor = presto_client.execute("test".to_string()).await.unwrap();
-
-    let stream = executor.rows();
-    pin_mut!(stream);
-    let rows: Result<Vec<T>, PrestinoError> = stream.try_collect().await;
-    rows
+    presto_client.execute_collect("test".to_string()).await
 }
 
 #[tokio::test]
