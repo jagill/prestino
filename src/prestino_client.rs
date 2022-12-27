@@ -15,19 +15,19 @@ pub struct PrestinoClient {
 }
 
 impl PrestinoClient {
-    pub fn presto(base_url: String) -> Self {
+    pub fn presto(base_url: impl Into<String>) -> Self {
         Self {
             fork: Fork::Presto,
-            base_url,
+            base_url: base_url.into(),
             headers: HeaderMap::new(),
             http_client: Client::new(),
         }
     }
 
-    pub fn trino(base_url: String) -> Self {
+    pub fn trino(base_url: impl Into<String>) -> Self {
         Self {
             fork: Fork::Trino,
-            base_url,
+            base_url: base_url.into(),
             headers: HeaderMap::new(),
             http_client: Client::new(),
         }
@@ -88,7 +88,7 @@ impl PrestinoClient {
     /// A convenience function to retrieve all the rows for the statement into a single Vec.
     pub async fn execute_collect<T: DeserializeOwned>(
         &self,
-        statement: String,
+        statement: impl Into<String>,
     ) -> Result<Vec<T>, PrestinoError> {
         let mut rows: Vec<T> = Vec::new();
         let executor = self.execute::<T>(statement).await?;
@@ -104,7 +104,7 @@ impl PrestinoClient {
     /// Begin execution of a statement, returning a StatementExecutor to continue execution.
     pub async fn execute<T: DeserializeOwned>(
         &self,
-        statement: String,
+        statement: impl Into<String>,
     ) -> Result<StatementExecutor<T>, PrestinoError> {
         let mut connection = ClientConnection {
             headers: self.headers.clone(),

@@ -28,16 +28,28 @@ impl MyRow {
     }
 }
 
-let client = PrestoClient::new("http://localhost:8080".to_owned());
-let stream = client.execute(r#"
+let client = PrestoClient::new("http://localhost:8080");
+
+// If you want to stream the results by row, create a StatementExecutor
+let executor = client.execute(r#"
     SELECT a, b, c
     FROM (...)
-"#.to_string()).await.unwrap().rows();
+"#).await.unwrap();
+// To stream row-by-row, use `.rows()`. You can also stream by batches with
+// `.batches()`, or get detailed progress statistics with `.responses()`
+stream = executor.rows();
 pin_mut!(stream);
 let rows: Vec<MyRow> = stream.try_collect().await.unwrap();
 for my_row in rows {
     println!("{}", my_row.foo());
 }
+
+
+// Or if you just want all the results at once
+let rows: Vec<MyRow> = client.execute_collect(r#"
+    SELECT a, b, c
+    FROM (...)
+"#).await.unwrap();
 ```
 
 It will also be able to be used as a CLI that is a drop-in replacement for the Presto/Trino CLI tool.

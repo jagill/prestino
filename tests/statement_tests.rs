@@ -5,10 +5,10 @@ async fn test_create_select_delete_drop() {
     // Do a full loop of creating a table with data, selecting from it,
     // deleting rows, and dropping the table
 
-    let client = PrestinoClient::trino("http://localhost:8080".to_owned()).user("me");
+    let client = PrestinoClient::trino("http://localhost:8080").user("me");
 
     client
-        .execute_collect::<()>("DROP TABLE IF EXISTS memory.default.my_table".to_string())
+        .execute_collect::<()>("DROP TABLE IF EXISTS memory.default.my_table")
         .await
         .unwrap();
 
@@ -22,15 +22,14 @@ async fn test_create_select_delete_drop() {
             (2, 'b'),
             (3, 'c')
     ) AS t (id, name)
-    "#
-            .to_string(),
+    "#,
         )
         .await
         .unwrap();
     assert_eq!(rows, vec![(3i64,)]);
 
     let rows: Vec<(i64, String)> = client
-        .execute_collect("SELECT id, name FROM memory.default.my_table".to_string())
+        .execute_collect("SELECT id, name FROM memory.default.my_table")
         .await
         .unwrap();
     assert_eq!(
@@ -47,4 +46,21 @@ async fn test_create_select_delete_drop() {
         .await
         .unwrap();
     assert_eq!(rows, Vec::new());
+}
+
+#[tokio::test]
+async fn test_str_ref_statement() {
+    let client = PrestinoClient::trino("http://localhost:8080").user("me");
+    let rows: Vec<(i64,)> = client.execute_collect("SELECT 1 AS a").await.unwrap();
+    assert_eq!(rows, vec![(1i64,)]);
+}
+
+#[tokio::test]
+async fn test_string_statement() {
+    let client = PrestinoClient::trino("http://localhost:8080".to_string()).user("me");
+    let rows: Vec<(i64,)> = client
+        .execute_collect("SELECT 1 AS a".to_string())
+        .await
+        .unwrap();
+    assert_eq!(rows, vec![(1i64,)]);
 }

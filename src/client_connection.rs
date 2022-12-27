@@ -15,13 +15,13 @@ impl ClientConnection {
     pub async fn post_statement<T: DeserializeOwned>(
         &mut self,
         base_url: &str,
-        statement: String,
+        statement: impl Into<String>,
     ) -> Result<QueryResults<T>, PrestinoError> {
         let response = self
             .http_client
             .post(format!("{}/v1/statement", base_url))
             .headers(self.headers.clone())
-            .body(statement)
+            .body(statement.into())
             .send()
             .await?;
 
