@@ -47,29 +47,26 @@ impl PrestinoClient {
         self
     }
 
-    /// A convenience function to retrieve all the rows for the statement into a single Vec.
-    pub async fn execute_collect<T: DeserializeOwned>(
-        &self,
-        statement: impl Into<String>,
-    ) -> Result<Vec<T>, PrestinoError> {
-        let mut rows: Vec<T> = Vec::new();
-        let executor = self.execute::<T>(statement).await?;
-        let stream = executor.batches();
-        pin_mut!(stream);
-        while let Some(batch) = stream.try_next().await? {
-            rows.extend(batch);
-        }
-
-        Ok(rows)
-    }
-
     /// Begin execution of a statement, returning a StatementExecutor to continue execution.
     pub async fn execute<T: DeserializeOwned>(
         &self,
         statement: impl Into<String>,
     ) -> Result<StatementExecutor<T>, PrestinoError> {
+        let new_headers = self.headers.new_with_fork();
+        self.execute_with_headers(statement, &new_headers).await
+    }
+
+    /// Begin execution of a statement, returning a StatementExecutor to continue execution.
+    pub async fn execute_with_headers<T: DeserializeOwned>(
+        &self,
+        statement: impl Into<String>,
+        headers: &Headers,
+    ) -> Result<StatementExecutor<T>, PrestinoError> {
+        let mut connection_headers = self.headers.clone();
+        connection_headers.update(headers);
+
         let mut connection = ClientConnection {
-            headers: self.headers.clone(),
+            headers: connection_headers,
             http_client: self.http_client.clone(),
         };
 
@@ -80,5 +77,31 @@ impl PrestinoClient {
             connection,
             results,
         ))
+    }
+
+    /// A convenience function to retrieve all the rows for the statement into a single Vec.
+    pub async fn execute_collect<T: DeserializeOwned>(
+        &self,
+        statement: impl Into<String>,
+    ) -> Result<Vec<T>, PrestinoError> {
+        let new_headers = self.headers.new_with_fork();
+        self.execute_collect_with_headers(statement, &new_headers).await
+    }
+
+    /// A convenience function to retrieve all the rows for the statement into a single Vec.
+    pub async fn execute_collect_with_headers<T: DeserializeOwned>(
+        &self,
+        statement: impl Into<String>,
+        headers: &Headers,
+    ) -> Result<Vec<T>, PrestinoError> {
+        let mut rows: Vec<T> = Vec::new();
+        let executor = self.execute_with_headers::<T>(statement, headers).await?;
+        let stream = executor.batches();
+        pin_mut!(stream);
+        while let Some(batch) = stream.try_next().await? {
+            rows.extend(batch);
+        }
+
+        Ok(rows)
     }
 }

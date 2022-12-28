@@ -29,6 +29,31 @@ impl Headers {
         }
     }
 
+    /// Create a Headers instance with the same fork as this one
+    pub fn new_with_fork(&self) -> Self {
+        Self {
+            fork: self.fork,
+            headers: HeaderMap::new(),
+            session_properties: BTreeMap::new(),
+        }
+    }
+
+    /// Update the values in this Head with values from the other Headers.
+    ///
+    /// This will panic if self and other have different forks.
+    pub fn update(&mut self, other: &Headers) {
+        // TODO: Make this a generic type so this is caught at compile time.
+        if self.fork != other.fork {
+            panic!(
+                "Can't merge headers with different forms.  self {:?}, other {:?}",
+                self.fork, other.fork
+            );
+        }
+        self.headers.extend(other.headers.clone().into_iter());
+        self.session_properties
+            .extend(other.session_properties.clone().into_iter());
+    }
+
     fn name_for(&self, name: &str) -> HeaderName {
         // Since we control the input, we can ensure that it is always visible ASCII
         HeaderName::try_from(self.fork.name_for(name)).unwrap()
@@ -337,6 +362,40 @@ mod tests {
         assert_eq!(
             get_value(&header_map, "x-trino-session"),
             Some("a=1,b=4".to_string())
+        );
+    }
+
+    #[test]
+    fn test_merge() {
+        let mut base_headers = Headers::trino()
+            .user("me")
+            .catalog("memory")
+            .session("a", "1")
+            .session("b", "2")
+            .session("c", "3");
+
+        let new_headers = Headers::trino()
+            .user("you")
+            .schema("database")
+            .session("b", "4");
+
+        base_headers.update(&new_headers);
+        let header_map = base_headers.build().unwrap();
+        assert_eq!(
+            get_value(&header_map, "x-trino-user"),
+            Some("you".to_string())
+        );
+        assert_eq!(
+            get_value(&header_map, "x-trino-catalog"),
+            Some("memory".to_string())
+        );
+        assert_eq!(
+            get_value(&header_map, "x-trino-schema"),
+            Some("database".to_string())
+        );
+        assert_eq!(
+            get_value(&header_map, "x-trino-session"),
+            Some("a=1,b=4,c=3".to_string())
         );
     }
 }
