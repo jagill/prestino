@@ -66,3 +66,18 @@ prestino$ docker compose up
 This creates a Trino instance in a Docker container, accessible via localhost:8080.  It has an
 in-memory catalog, so you can create tables and select them, as well as a TPCH catalog to test
 against standardized data.
+
+## License
+
+<sup>
+Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
+2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
+</sup>
+
+<br/>
+
+<sub>
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
+be dual licensed as above, without any additional terms or conditions.
+</sub>
