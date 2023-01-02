@@ -1,5 +1,6 @@
 use crate::results::QueryResults;
 use crate::{Headers, PrestinoError};
+use log::debug;
 use reqwest::{Client, Response};
 use serde::de::DeserializeOwned;
 
@@ -31,7 +32,7 @@ impl ClientConnection {
         &mut self,
         next_uri: &str,
     ) -> Result<QueryResults<T>, PrestinoError> {
-        println!("Getting next results: {}", next_uri);
+        debug!("Getting next results: {}", next_uri);
         let response = self
             .http_client
             .get(next_uri)

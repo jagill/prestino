@@ -1,5 +1,6 @@
 use crate::Fork;
 use crate::PrestinoError;
+use log::debug;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use std::collections::BTreeMap;
 
@@ -246,24 +247,24 @@ impl Headers {
         match self.key_from(name) {
             Some("set-catalog") => {
                 let catalog = value.to_str()?;
-                println!("Setting catalog: {catalog}");
+                debug!("Setting catalog: {catalog}");
                 self.set_catalog(catalog);
             }
             Some("set-schema") => {
                 let schema = value.to_str()?;
-                println!("Setting schema: {schema}");
+                debug!("Setting schema: {schema}");
                 self.set_schema(schema);
             }
             Some("set-session") => match value.to_str()?.split_once('=') {
                 None => return Err(PrestinoError::HeaderParseError),
                 Some((k, v)) => {
-                    println!("Setting session: {k}={v}");
+                    debug!("Setting session: {k}={v}");
                     self.set_session(k, v);
                 }
             },
             Some("clear-session") => {
                 let name = value.to_str()?;
-                println!("Clearing session {name}");
+                debug!("Clearing session {name}");
                 self.clear_session(name);
             }
             // TODO: set-role
@@ -271,7 +272,7 @@ impl Headers {
             // TODO: deallocated-prepare
             // TODO: started-transaction-id
             // TODO: clear-transaction-id
-            Some(_) => println!("Unprocessed response header: {name:?}"),
+            Some(_) => debug!("Unprocessed response header: {name:?}"),
             None => (),
         }
         Ok(())

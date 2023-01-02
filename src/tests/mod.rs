@@ -2,6 +2,7 @@ mod response_chain;
 mod response_set_1;
 
 use crate::{PrestinoClient, PrestinoError};
+use log::debug;
 use response_chain::ResponseChain;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
@@ -11,7 +12,7 @@ use wiremock::MockServer;
 async fn get_rows<T: DeserializeOwned>(response_strs: &[&str]) -> Result<Vec<T>, PrestinoError> {
     let mock_server = MockServer::start().await;
     let base_uri = mock_server.uri();
-    println!("{base_uri}");
+    debug!("{base_uri}");
     let responses = ResponseChain::new(response_strs, base_uri);
     responses.mock_flow(&mock_server).await;
 

@@ -1,3 +1,4 @@
+use log::debug;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use wiremock::matchers::{method, path};
@@ -51,7 +52,7 @@ impl ResponseChain {
             .await;
 
         for (next_uri, next_json) in self.next_uris.iter().zip(self.next_responses.iter()) {
-            println!("Mocking {} with\n\t{}", next_uri, next_json);
+            debug!("Mocking {} with\n\t{}", next_uri, next_json);
             let next_response = ResponseTemplate::new(200).set_body_string(next_json);
             Mock::given(method("GET"))
                 .and(path(next_uri))
@@ -66,7 +67,7 @@ impl ResponseChain {
         let column_str = columns.iter()
             .map(|(name, typ)| format!(r#"{{"name":"{name}","type":"{typ}","typeSignature":{{"rawType":"{typ}","arguments":[]}}}}"#))
             .collect::<Vec<String>>().join(",");
-        println!("Column str: {column_str}");
+        debug!("Column str: {column_str}");
 
         let mut responses = Vec::new();
         // Queued
@@ -76,7 +77,7 @@ impl ResponseChain {
         for (idx, rows) in data.iter().enumerate() {
             // Data row; can have empty ("[]") data.
             let data_str = serde_json::to_string(rows).unwrap();
-            println!("Data str: {data_str}");
+            debug!("Data str: {data_str}");
             responses.push(format!(r#"{{"id":"{id}","infoUri":"http://localhost:8080/ui/query.html?{id}","partialCancelUri":"http://localhost:8080/v1/statement/executing/partialCancel/{id}/0/y0f368c8309d5e2d7dd10875b57cb880e862ab0cc/2","nextUri":"http://localhost:8080/v1/statement/executing/{id}/y0f368c8309d5e2d7dd10875b57cb880e862ab0cc/{idx}","columns":[{column_str}],"data":{data_str},"stats":{{"state":"RUNNING","queued":false,"scheduled":true,"nodes":1,"totalSplits":1,"queuedSplits":1,"runningSplits":0,"completedSplits":0,"cpuTimeMillis":0,"wallTimeMillis":0,"queuedTimeMillis":3,"elapsedTimeMillis":85,"processedRows":0,"processedBytes":0,"physicalInputBytes":0,"peakMemoryBytes":103,"spilledBytes":0,"rootStage":{{"stageId":"0","state":"RUNNING","done":false,"nodes":1,"totalSplits":1,"queuedSplits":1,"runningSplits":0,"completedSplits":0,"cpuTimeMillis":0,"wallTimeMillis":0,"processedRows":0,"processedBytes":0,"physicalInputBytes":0,"failedTasks":0,"coordinatorOnly":false,"subStages":[]}},"progressPercentage":0.0}},"warnings":[]}}"#));
         }
         // Finished, next_uri (stats still calculating)

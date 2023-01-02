@@ -77,7 +77,6 @@ mod tests {
     #[test]
     fn deserialize_basic_value() {
         let deserialized: QueryResults<Value> = serde_json::from_str(BASE_RESULTS_STR).unwrap();
-        println!("deserialized = {:?}", deserialized);
         assert_eq!(deserialized.data.unwrap(), [json!([123, true])]);
     }
 
@@ -85,7 +84,6 @@ mod tests {
     fn deserialize_basic_tuple() {
         let deserialized_tuple: QueryResults<(i64, bool)> =
             serde_json::from_str(BASE_RESULTS_STR).unwrap();
-        println!("deserialized = {:?}", deserialized_tuple);
         assert_eq!(deserialized_tuple.data.unwrap(), [(123, true)]);
     }
 
@@ -101,7 +99,6 @@ mod tests {
         // let deserialized_tuple: QueryResults<StructRow> = QueryResults::from(deserialized_raw.clone());
         let mut deserialized_struct: QueryResults<StructRow> =
             serde_json::from_str(BASE_RESULTS_STR).unwrap();
-        println!("deserialized_struct = {:?}", deserialized_struct);
         let rows = deserialized_struct.data.take().unwrap();
         assert_eq!(
             rows,

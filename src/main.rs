@@ -1,10 +1,12 @@
 use futures::StreamExt;
 use futures_util::pin_mut;
+use log::info;
 use prestino::{PrestinoClient, StatementExecutor};
 use serde_json::Value;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    env_logger::init();
     let host = "http://localhost:8080";
     let query = "SELECT 1 AS a";
 
@@ -36,7 +38,7 @@ async fn run(host: &str, query: &str, stream_mode: StreamMode) -> Result<(), any
 
     match stream_mode {
         StreamMode::Response => {
-            println!(">> Iterate responses");
+            info!(">> Iterate responses");
             let stream = executor.responses();
             pin_mut!(stream);
             while let Some(response_res) = stream.next().await {
@@ -48,7 +50,7 @@ async fn run(host: &str, query: &str, stream_mode: StreamMode) -> Result<(), any
             }
         }
         StreamMode::Batch => {
-            println!(">> Iterate batches");
+            info!(">> Iterate batches");
             let stream = executor.batches();
             pin_mut!(stream);
             while let Some(items) = stream.next().await {
@@ -58,7 +60,7 @@ async fn run(host: &str, query: &str, stream_mode: StreamMode) -> Result<(), any
             }
         }
         StreamMode::Row => {
-            println!(">> Iterate rows");
+            info!(">> Iterate rows");
             let stream = executor.rows();
             pin_mut!(stream);
             while let Some(item) = stream.next().await {
