@@ -85,7 +85,8 @@ impl PrestinoClient {
         statement: impl Into<String>,
     ) -> Result<Vec<T>, PrestinoError> {
         let new_headers = self.headers.new_with_fork();
-        self.execute_collect_with_headers(statement, &new_headers).await
+        self.execute_collect_with_headers(statement, &new_headers)
+            .await
     }
 
     /// A convenience function to retrieve all the rows for the statement into a single Vec.

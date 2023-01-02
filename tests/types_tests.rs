@@ -4,6 +4,7 @@ use maplit::hashmap;
 use prestino::PrestinoError;
 use serde::Deserialize;
 use std::collections::HashMap;
+use test_log::test;
 
 #[derive(Debug, PartialEq, Deserialize)]
 struct BasicTypes {
@@ -29,7 +30,7 @@ struct BasicTypesOption {
     string: Option<String>,
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_basic_types() {
     let sql = r#"
     SELECT
@@ -65,7 +66,7 @@ async fn test_basic_types() {
     );
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_basic_types_nullable() {
     let sql = r#"
     SELECT
@@ -139,7 +140,7 @@ async fn test_basic_types_nullable() {
     );
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_basic_types_nullable_non_option() {
     let sql = r#"
     SELECT
@@ -174,7 +175,7 @@ async fn test_basic_types_nullable_non_option() {
     }
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_array_types() {
     let sql = r#"
         SELECT
@@ -210,7 +211,7 @@ async fn test_array_types() {
     );
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_map_types() {
     let sql = r#"
         SELECT
@@ -255,7 +256,7 @@ async fn test_map_types() {
     );
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_struct_types() {
     let sql = r#"
         SELECT

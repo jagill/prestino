@@ -281,6 +281,7 @@ impl Headers {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_log::test;
 
     fn get_value(header_map: &HeaderMap, name: &str) -> Option<String> {
         let header_value = header_map.get(name);

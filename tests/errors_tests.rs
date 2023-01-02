@@ -1,8 +1,9 @@
 mod common;
 use common::get_rows;
 use prestino::PrestinoError;
+use test_log::test;
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_syntax_error() {
     let result: Result<Vec<()>, PrestinoError> = get_rows("not good sql").await;
     assert!(result.is_err());
@@ -16,7 +17,7 @@ async fn test_syntax_error() {
     }
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_missing_col_error() {
     let result: Result<Vec<()>, PrestinoError> = get_rows(
         r#"

@@ -1,6 +1,7 @@
 use prestino::PrestinoClient;
+use test_log::test;
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_create_select_delete_drop() {
     // Do a full loop of creating a table with data, selecting from it,
     // deleting rows, and dropping the table
@@ -48,14 +49,14 @@ async fn test_create_select_delete_drop() {
     assert_eq!(rows, Vec::new());
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_str_ref_statement() {
     let client = PrestinoClient::trino("http://localhost:8080").user("me");
     let rows: Vec<(i64,)> = client.execute_collect("SELECT 1 AS a").await.unwrap();
     assert_eq!(rows, vec![(1i64,)]);
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_string_statement() {
     let client = PrestinoClient::trino("http://localhost:8080".to_string()).user("me");
     let rows: Vec<(i64,)> = client

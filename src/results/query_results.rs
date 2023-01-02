@@ -19,6 +19,7 @@ pub struct QueryResults<T> {
 mod tests {
     use serde::Deserialize;
     use serde_json::{json, Value};
+    use test_log::test;
 
     use super::*;
 

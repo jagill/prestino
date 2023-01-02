@@ -5,6 +5,7 @@ use crate::{PrestinoClient, PrestinoError};
 use response_chain::ResponseChain;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
+use test_log::test;
 use wiremock::MockServer;
 
 async fn get_rows<T: DeserializeOwned>(response_strs: &[&str]) -> Result<Vec<T>, PrestinoError> {
@@ -18,13 +19,13 @@ async fn get_rows<T: DeserializeOwned>(response_strs: &[&str]) -> Result<Vec<T>,
     presto_client.execute_collect("test".to_string()).await
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_basic_flow_1() {
     let rows = get_rows::<Value>(response_set_1::RESPONSES).await;
     assert_eq!(rows.unwrap(), vec![json!([1])],);
 }
 
-#[tokio::test]
+#[test(tokio::test)]
 async fn test_basic_types() {
     let response_strs: Vec<String> = ResponseChain::make_response_set(
         &[
