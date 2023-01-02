@@ -37,7 +37,7 @@ impl PrestinoClient {
         &self.headers
     }
 
-    pub fn headers_mut(&mut self) -> &Headers {
+    pub fn headers_mut(&mut self) -> &mut Headers {
         &mut self.headers
     }
 
