@@ -60,11 +60,10 @@ impl Headers {
     }
 
     /// Extract `foo` from `x-presto-foo`, or return None if the name doesn't start with that prefix.
-    /// TODO: Make return type &str once we can figure out the lifetimes
-    fn key_from<'a>(&self, name: &HeaderName) -> Option<String> {
-        let name_str = name.as_str().to_ascii_lowercase();
+    fn key_from<'a>(&self, name: &'a HeaderName) -> Option<&'a str> {
+        let name_str = name.as_str();
         let stripped = name_str.strip_prefix(self.fork.prefix())?;
-        stripped.strip_prefix("-").map(|s| s.to_owned())
+        stripped.strip_prefix("-")
     }
 
     /// Convert a value to a lowercase HeaderValue.
@@ -244,7 +243,7 @@ impl Headers {
         name: &HeaderName,
         value: &HeaderValue,
     ) -> Result<(), PrestinoError> {
-        match self.key_from(name).as_deref() {
+        match self.key_from(name) {
             Some("set-catalog") => {
                 let catalog = value.to_str()?;
                 println!("Setting catalog: {catalog}");
