@@ -2,7 +2,6 @@ use futures::StreamExt;
 use futures_util::pin_mut;
 use prestino::{PrestinoClient, StatementExecutor};
 use serde_json::Value;
-use tokio::io::AsyncWriteExt as _;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
