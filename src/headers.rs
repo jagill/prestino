@@ -141,14 +141,48 @@ impl Headers {
         self
     }
 
-    // TODO: time_zone
-    // TODO: language
+    /// Sets the timezone to be used when running the query, which by default is the timezone of the Presto engine.
+    /// Example: America/Los_Angeles
+    /// The `timezone` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
+    pub fn set_timezone(&mut self, timezone: &str) -> &mut Self {
+        self.headers
+            .insert(self.name_for("time-zone"), Self::to_value(timezone));
+        self
+    }
+
+    /// Supplies the timezone to be used when running the query, which by default is the timezone of the Presto engine.
+    /// Example: America/Los_Angeles
+    /// The `timezone` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
+    pub fn timezone(mut self, timezone: &str) -> Self {
+        self.set_timezone(timezone);
+        self
+    }
+
+    /// Sets the language to be used when running the query and formatting results.
+    /// The `language` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
+    pub fn set_language(&mut self, language: &str) -> &mut Self {
+        self.headers
+            .insert(self.name_for("language"), Self::to_value(language));
+        self
+    }
+
+    /// Supplies the language to be used when running the query and formatting results.
+    /// The `language` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
+    pub fn language(mut self, language: &str) -> Self {
+        self.set_language(language);
+        self
+    }
 
     pub fn set_trace_token(&mut self, trace_token: &str) -> &mut Self {
         self.headers
             .insert(self.name_for("trace-token"), Self::to_value(trace_token));
         self
     }
+
     /// Supplies a trace token to the Trino engine to help identify log lines
     /// that originate with this query request.
     /// The `trace_token` field must only contain visible ASCII characters (32-127);
@@ -192,9 +226,49 @@ impl Headers {
         self
     }
 
-    // TODO: role
+    /// Sets the Role for Query processing. A “role” represents a collection of permissions.
+    /// The `role` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
+    pub fn set_role(&mut self, role: &str) -> &mut Self {
+        self.headers
+            .insert(self.name_for("role"), Self::to_value(role));
+        self
+    }
+
+    /// Supplies the Role for Query processing. A “role” represents a collection of permissions.
+    /// The `role` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
+    pub fn role(mut self, role: &str) -> Self {
+        self.set_role(role);
+        self
+    }
+
     // TODO: prepared-statement
-    // TODO: transaction-id
+
+    /// Sets the transaction ID to use for query processing.
+    /// The `transaction-id` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
+    pub fn set_transaction_id(&mut self, transaction_id: &str) -> &mut Self {
+        self.headers.insert(
+            self.name_for("transaction-id"),
+            Self::to_value(transaction_id),
+        );
+        self
+    }
+
+    /// Supplies the transaction ID to use for query processing.
+    /// The `transaction-id` field must only contain visible ASCII characters (32-127);
+    /// otherwise this function will panic.
+    pub fn transaction_id(mut self, transaction_id: &str) -> Self {
+        self.set_transaction_id(transaction_id);
+        self
+    }
+
+    /// Clears the Transaction ID used for query processing.
+    pub fn clear_transaction_id(&mut self) -> &mut Self {
+        self.headers.remove(self.name_for("transaction-id"));
+        self
+    }
 
     pub fn set_client_info(&mut self, client_info: &str) -> &mut Self {
         self.headers
@@ -267,11 +341,22 @@ impl Headers {
                 debug!("Clearing session {name}");
                 self.clear_session(name);
             }
-            // TODO: set-role
+            Some("set-role") => {
+                let role: &str = value.to_str()?;
+                debug!("Setting role {role}");
+                self.set_role(role);
+            }
+            Some("started-transaction-id") => {
+                let transaction_id: &str = value.to_str()?;
+                debug!("Setting Transaction Id {transaction_id}");
+                self.set_transaction_id(transaction_id);
+            }
+            Some("clear-transaction-id") => {
+                debug!("Clearing Transaction Id");
+                self.clear_transaction_id();
+            }
             // TODO: added-prepare
             // TODO: deallocated-prepare
-            // TODO: started-transaction-id
-            // TODO: clear-transaction-id
             Some(_) => debug!("Unprocessed response header: {name:?}"),
             None => (),
         }
@@ -282,7 +367,6 @@ impl Headers {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_log::test;
 
     fn get_value(header_map: &HeaderMap, name: &str) -> Option<String> {
         let header_value = header_map.get(name);
@@ -291,9 +375,16 @@ mod tests {
 
     #[test]
     fn test_basic_headers() {
-        let mut headers = Headers::trino().user("me").source("here").catalog("memory");
+        let mut headers = Headers::trino()
+            .user("me")
+            .source("here")
+            .catalog("memory")
+            .language("en/us");
 
         headers.set_schema("database");
+        headers.set_timezone("america/chicago");
+        headers.set_role("moderator");
+        headers.set_transaction_id("abc123");
 
         let header_map = headers.build().unwrap();
         assert_eq!(
@@ -311,6 +402,22 @@ mod tests {
         assert_eq!(
             get_value(&header_map, "x-trino-schema"),
             Some("database".to_string())
+        );
+        assert_eq!(
+            get_value(&header_map, "x-trino-language"),
+            Some("en/us".to_string())
+        );
+        assert_eq!(
+            get_value(&header_map, "x-trino-time-zone"),
+            Some("america/chicago".to_string())
+        );
+        assert_eq!(
+            get_value(&header_map, "x-trino-role"),
+            Some("moderator".to_string())
+        );
+        assert_eq!(
+            get_value(&header_map, "x-trino-transaction-id"),
+            Some("abc123".to_string())
         );
 
         headers.set_user("you");
@@ -347,6 +454,8 @@ mod tests {
         response_header_map.insert("X-Trino-Set-Schema", "schema2".parse().unwrap());
         response_header_map.insert("X-Trino-Set-Session", "b=4".parse().unwrap());
         response_header_map.insert("X-Trino-Clear-Session", "c".parse().unwrap());
+        response_header_map.insert("X-Trino-Set-Role", "moderator".parse().unwrap());
+        response_header_map.insert("X-Trino-Started-Transaction-Id", "abc123".parse().unwrap());
 
         request_headers
             .update_from_response_headers(&response_header_map)
@@ -364,6 +473,24 @@ mod tests {
             get_value(&header_map, "x-trino-session"),
             Some("a=1,b=4".to_string())
         );
+        assert_eq!(
+            get_value(&header_map, "x-trino-role"),
+            Some("moderator".to_string())
+        );
+        assert_eq!(
+            get_value(&header_map, "x-trino-transaction-id"),
+            Some("abc123".to_string())
+        );
+
+        response_header_map.clear();
+        response_header_map.insert("X-Trino-Clear-Transaction-Id", "".parse().unwrap());
+
+        let mut request_headers = Headers::trino().transaction_id("abc123");
+        request_headers
+            .update_from_response_headers(&response_header_map)
+            .unwrap();
+        let header_map = request_headers.build().unwrap();
+        assert!(!header_map.contains_key("X-Trino-Transaction-Id"));
     }
 
     #[test]
