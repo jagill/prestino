@@ -15,17 +15,17 @@ pub struct PrestinoClient {
 
 impl PrestinoClient {
     /// Create a Presto client with no headers set.
-    pub fn presto(base_url: impl Into<String>) -> Self {
+    pub fn presto(base_url: &str) -> Self {
         Self::with_headers(base_url, Headers::presto())
     }
 
     /// Create a Trino client with no headers set.
-    pub fn trino(base_url: impl Into<String>) -> Self {
+    pub fn trino(base_url: &str) -> Self {
         Self::with_headers(base_url, Headers::trino())
     }
 
     /// Create a client with the headers set.  The headers fork will determine the client's fork.
-    pub fn with_headers(base_url: impl Into<String>, headers: Headers) -> Self {
+    pub fn with_headers(base_url: &str, headers: Headers) -> Self {
         Self {
             base_url: base_url.into(),
             headers,
@@ -50,7 +50,7 @@ impl PrestinoClient {
     /// Begin execution of a statement, returning a StatementExecutor to continue execution.
     pub async fn execute<T: DeserializeOwned>(
         &self,
-        statement: impl Into<String>,
+        statement: &str,
     ) -> Result<StatementExecutor<T>, PrestinoError> {
         let new_headers = self.headers.new_with_fork();
         self.execute_with_headers(statement, &new_headers).await
@@ -59,7 +59,7 @@ impl PrestinoClient {
     /// Begin execution of a statement, returning a StatementExecutor to continue execution.
     pub async fn execute_with_headers<T: DeserializeOwned>(
         &self,
-        statement: impl Into<String>,
+        statement: &str,
         headers: &Headers,
     ) -> Result<StatementExecutor<T>, PrestinoError> {
         let mut connection_headers = self.headers.clone();
@@ -82,7 +82,7 @@ impl PrestinoClient {
     /// A convenience function to retrieve all the rows for the statement into a single Vec.
     pub async fn execute_collect<T: DeserializeOwned>(
         &self,
-        statement: impl Into<String>,
+        statement: &str,
     ) -> Result<Vec<T>, PrestinoError> {
         let new_headers = self.headers.new_with_fork();
         self.execute_collect_with_headers(statement, &new_headers)
@@ -92,7 +92,7 @@ impl PrestinoClient {
     /// A convenience function to retrieve all the rows for the statement into a single Vec.
     pub async fn execute_collect_with_headers<T: DeserializeOwned>(
         &self,
-        statement: impl Into<String>,
+        statement: &str,
         headers: &Headers,
     ) -> Result<Vec<T>, PrestinoError> {
         let mut rows: Vec<T> = Vec::new();

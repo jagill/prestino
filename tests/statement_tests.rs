@@ -43,7 +43,7 @@ async fn test_create_select_delete_drop() {
     );
 
     let rows: Vec<()> = client
-        .execute_collect("DROP TABLE memory.default.my_table".to_string())
+        .execute_collect("DROP TABLE memory.default.my_table")
         .await
         .unwrap();
     assert_eq!(rows, Vec::new());
@@ -58,9 +58,9 @@ async fn test_str_ref_statement() {
 
 #[test(tokio::test)]
 async fn test_string_statement() {
-    let client = PrestinoClient::trino("http://localhost:8080".to_string()).user("me");
+    let client = PrestinoClient::trino("http://localhost:8080").user("me");
     let rows: Vec<(i64,)> = client
-        .execute_collect("SELECT 1 AS a".to_string())
+        .execute_collect("SELECT 1 AS a")
         .await
         .unwrap();
     assert_eq!(rows, vec![(1i64,)]);
