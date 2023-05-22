@@ -1,6 +1,7 @@
-use crate::client_connection::ClientConnection;
+use crate::client_connection::{ClientConnection, ReqwestClientConnection};
 use crate::headers::Headers;
 use crate::{PrestinoError, StatementExecutor};
+use crate::results::QueryResults;
 use futures::pin_mut;
 use futures::TryStreamExt;
 use reqwest::Client;
@@ -65,12 +66,14 @@ impl PrestinoClient {
         let mut connection_headers = self.headers.clone();
         connection_headers.update(headers);
 
-        let mut connection = ClientConnection {
+        let mut connection = ReqwestClientConnection {
             headers: connection_headers,
             http_client: self.http_client.clone(),
         };
 
-        let results = connection.post_statement(&self.base_url, statement).await?;
+        let statement_uri = format!("{}/v1/statement", &self.base_url);
+        let result_bytes = connection.post_statement(&statement_uri, statement).await?;
+        let results: QueryResults<T> = serde_json::from_slice(&result_bytes)?;
 
         Ok(StatementExecutor::new(
             results.id.clone(),

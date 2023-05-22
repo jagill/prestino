@@ -163,14 +163,14 @@ async fn test_basic_types_nullable_non_option() {
         get_rows(sql).await;
     match result {
         Ok(_) => panic!("Failed to error on incorrect type deserialization."),
-        Err(PrestinoError::HttpError(e)) => println!("Found right error: {e:?}"),
+        Err(PrestinoError::JsonParseError(e)) => println!("Found right error: {e:?}"),
         Err(err) => panic!("Unexpected error: {err:?}"),
     }
 
     let result2: Result<Vec<BasicTypes>, PrestinoError> = get_rows(sql).await;
     match result2 {
         Ok(_) => panic!("Failed to error on incorrect type deserialization."),
-        Err(PrestinoError::HttpError(e)) => println!("Found right error: {e:?}"),
+        Err(PrestinoError::JsonParseError(e)) => println!("Found right error: {e:?}"),
         Err(err) => panic!("Unexpected error: {err:?}"),
     }
 }

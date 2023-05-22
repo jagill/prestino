@@ -9,20 +9,25 @@ use std::time::{Duration, Instant};
 
 pub struct StatementExecutor<T: DeserializeOwned> {
     id: String,
-    connection: ClientConnection,
+    connection: Box<dyn ClientConnection>,
     results: QueryResults<T>,
     next_run_time: Instant,
 }
 
 impl<T: DeserializeOwned> StatementExecutor<T> {
-    pub(crate) fn new(id: String, connection: ClientConnection, results: QueryResults<T>) -> Self {
+    pub(crate) fn new(
+        id: String,
+        connection: impl ClientConnection + 'static,
+        results: QueryResults<T>,
+    ) -> Self {
         Self {
             id,
-            connection,
+            connection: Box::new(connection),
             results,
             next_run_time: Instant::now(),
         }
     }
+
     pub fn id(&self) -> &str {
         &self.id
     }
@@ -66,7 +71,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
 
         // If there is no next_uri, we have finished iteration.
         let next_uri = self.results.next_uri.take()?;
-        self.results = match self.connection.get_next_results(&next_uri).await {
+        let result_bytes = match self.connection.get_next_results(&next_uri).await {
             Err(PrestinoError::StatusCodeError(503, _)) => {
                 // Server is overloaded and needs 100ms:
                 // https://trino.io/docs/current/develop/client-protocol.html#overview-of-query-processing
@@ -76,6 +81,10 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
             }
             Err(err) => return Some(Err(err)),
             Ok(results) => results,
+        };
+        self.results = match serde_json::from_slice(&result_bytes) {
+            Ok(res) => res,
+            Err(err) => return Some(Err(PrestinoError::from(err))),
         };
 
         if let Some(err) = self.results.error.take() {
