@@ -4,6 +4,7 @@ mod prestino_client;
 mod prestino_error;
 pub mod results;
 mod statement_executor;
+mod headers2;
 
 pub use headers::Headers;
 pub use prestino_client::PrestinoClient;
