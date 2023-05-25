@@ -1,6 +1,6 @@
 use crate::client_connection::ClientConnection;
 use crate::results::{Column, QueryResults, QueryStats};
-use crate::PrestinoError;
+use crate::{PrestinoError, Headers};
 use async_stream::try_stream;
 use futures::Stream;
 use futures_util::pin_mut;
@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 pub struct StatementExecutor<T: DeserializeOwned> {
     id: String,
+    headers: Headers,
     connection: Box<dyn ClientConnection>,
     results: QueryResults<T>,
     next_run_time: Instant,
@@ -17,11 +18,13 @@ pub struct StatementExecutor<T: DeserializeOwned> {
 impl<T: DeserializeOwned> StatementExecutor<T> {
     pub(crate) fn new(
         id: String,
+        headers: Headers,
         connection: impl ClientConnection + 'static,
         results: QueryResults<T>,
     ) -> Self {
         Self {
             id,
+            headers,
             connection: Box::new(connection),
             results,
             next_run_time: Instant::now(),
@@ -53,7 +56,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
 
         // TODO: If this is an HTTP error, we should probably try again, or at least
         // allow the caller to try again.
-        self.connection.cancel(&next_uri).await
+        self.connection.cancel(&next_uri, &mut self.headers).await
     }
 
     pub async fn next_response(&mut self) -> Option<Result<Vec<T>, PrestinoError>> {
@@ -71,7 +74,7 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
 
         // If there is no next_uri, we have finished iteration.
         let next_uri = self.results.next_uri.take()?;
-        let result_bytes = match self.connection.get_next_results(&next_uri).await {
+        let result_bytes = match self.connection.get_next_results(&next_uri, &mut self.headers).await {
             Err(PrestinoError::StatusCodeError(503, _)) => {
                 // Server is overloaded and needs 100ms:
                 // https://trino.io/docs/current/develop/client-protocol.html#overview-of-query-processing
@@ -82,9 +85,11 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
             Err(err) => return Some(Err(err)),
             Ok(results) => results,
         };
-        self.results = match serde_json::from_slice(&result_bytes) {
+        // TODO: Make better error messages on json deser.  In particular, if there's a type error,
+        // can we print out the row that causes the error?
+        self.results = match parse_results(&result_bytes) {
             Ok(res) => res,
-            Err(err) => return Some(Err(PrestinoError::from(err))),
+            Err(e) => return Some(Err(e)),
         };
 
         if let Some(err) = self.results.error.take() {
@@ -141,4 +146,13 @@ impl<T: DeserializeOwned> StatementExecutor<T> {
             }
         }
     }
+}
+
+fn parse_results<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, PrestinoError> {
+        // TODO: Make better error messages on json deser.  In particular, if there's a type error,
+        // can we print out the row that causes the error?
+        match serde_json::from_slice(&bytes) {
+            Ok(res) => Ok(res),
+            Err(err) => return Err(PrestinoError::from(err)),
+        }
 }

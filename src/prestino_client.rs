@@ -1,20 +1,18 @@
 use crate::client_connection::{ClientConnection, ReqwestClientConnection};
-use crate::headers::Headers;
+use crate::Headers;
 use crate::{PrestinoError, StatementExecutor};
 use crate::results::QueryResults;
 use futures::pin_mut;
 use futures::TryStreamExt;
-use reqwest::Client;
 use serde::de::DeserializeOwned;
 
-#[derive(Debug, Clone)]
-pub struct PrestinoClient {
+pub struct PrestinoClient<C> {
     base_url: String,
     headers: Headers,
-    http_client: Client,
+    client_connection: C,
 }
 
-impl PrestinoClient {
+impl<C: ClientConnection> PrestinoClient<C> {
     /// Create a Presto client with no headers set.
     pub fn presto(base_url: &str) -> Self {
         Self::with_headers(base_url, Headers::presto())
@@ -27,10 +25,11 @@ impl PrestinoClient {
 
     /// Create a client with the headers set.  The headers fork will determine the client's fork.
     pub fn with_headers(base_url: &str, headers: Headers) -> Self {
+        let client_connection = ReqwestClientConnection { http_client: reqwest::Client::new() };
         Self {
             base_url: base_url.into(),
             headers,
-            http_client: Client::new(),
+            client_connection:  client_connection ,
         }
     }
 
@@ -67,16 +66,16 @@ impl PrestinoClient {
         connection_headers.update(headers);
 
         let mut connection = ReqwestClientConnection {
-            headers: connection_headers,
             http_client: self.http_client.clone(),
         };
 
         let statement_uri = format!("{}/v1/statement", &self.base_url);
-        let result_bytes = connection.post_statement(&statement_uri, statement).await?;
+        let result_bytes = connection.post_statement(&statement_uri, statement, &mut connection_headers).await?;
         let results: QueryResults<T> = serde_json::from_slice(&result_bytes)?;
 
         Ok(StatementExecutor::new(
             results.id.clone(),
+            headers,
             connection,
             results,
         ))

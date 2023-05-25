@@ -6,7 +6,7 @@ pub mod results;
 mod statement_executor;
 mod headers2;
 
-pub use headers::Headers;
+pub use headers2::Headers;
 pub use prestino_client::PrestinoClient;
 pub use prestino_error::PrestinoError;
 pub use results::QueryStats;

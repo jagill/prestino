@@ -1,4 +1,4 @@
-use log::error;
+use log::{debug, error};
 use std::collections::BTreeMap;
 
 use crate::Fork;
@@ -70,7 +70,6 @@ pub enum HeaderKey {
     // TODO: client-tags
     // TODO: resource-estimate
     // TODO: extra-credential
-
 }
 
 impl HeaderKey {
@@ -123,6 +122,22 @@ impl Headers {
         Self::new(self.fork)
     }
 
+    /// Update the values in this Head with values from the other Headers.
+    ///
+    /// This will panic if self and other have different forks.
+    pub fn update(&mut self, other: &Headers) {
+        // TODO: Make this a generic type so this is caught at compile time.
+        if self.fork != other.fork {
+            panic!(
+                "Can't merge headers with different forms.  self {:?}, other {:?}",
+                self.fork, other.fork
+            );
+        }
+        self.headers.extend(other.headers.clone().into_iter());
+        self.session_properties
+            .extend(other.session_properties.clone().into_iter());
+    }
+
     /// Sets a header, overriding the previous value (if any existed)
     /// Do not use for Session Properties, use `add_session_property` to add an
     /// individual property.  Trying to set "Session" here will return a PrestinoError::HeaderParseError
@@ -137,6 +152,11 @@ impl Headers {
         }
         self.headers.insert(key, validate(value)?);
         Ok(())
+    }
+
+    /// Convenience method to call set_header with HeaderKey::User.
+    pub fn set_user(&mut self, user: &str) -> Result<(), PrestinoError> {
+        self.set_header(HeaderKey::User, user)
     }
 
     pub fn add_session_property(&mut self, key: &str, value: &str) -> Result<(), PrestinoError> {
@@ -165,11 +185,55 @@ impl Headers {
         values
     }
 
-    // pub fn build(self) -> Result<HeaderMap, PrestinoError> {
-    //     let mut header_map = HeaderMap::new();
-    //     for header in self.headers.into_iter() {
-    //         header_map.append(&header.to_string())?;
-    //     }
-    //     Ok(header_map)
-    // }
+    /// Parse a response header to update this header.
+    /// If the header of the form "X-Presto-FOO: BAR", then
+    /// name would be "X-Presto-FOO" and value would be "BAR"
+    /// name and value will be downcased.
+    pub fn update_from_response_header(&mut self, name: &str, value: &str) -> Result<(), PrestinoError> {
+        use HeaderKey::*;
+
+        let name_str = validate(name)?;
+        let key = name_str
+            .strip_prefix(self.fork.prefix())
+            .and_then(|s| s.strip_prefix('-'));
+        let value = validate(value)?;
+        match key {
+            Some("set-catalog") => {
+                debug!("Setting catalog: {value}");
+                self.headers.insert(Catalog, value);
+            }
+            Some("set-schema") => {
+                debug!("Setting schema: {value}");
+                self.headers.insert(Schema, value);
+            }
+            Some("set-session") => match value.split_once('=') {
+                None => return Err(PrestinoError::HeaderParseError),
+                Some((k, v)) => {
+                    debug!("Setting session: {k}={v}");
+                    self.add_session_property(k, v);
+                }
+            },
+            Some("clear-session") => {
+                debug!("Clearing session {value}");
+                self.session_properties.remove(&value);
+            }
+            Some("set-role") => {
+                debug!("Setting role {value}");
+                self.headers.insert(Role, value);
+            }
+            Some("started-transaction-id") => {
+                debug!("Setting Transaction Id {value}");
+                self.headers.insert(TransactionId, value);
+            }
+            Some("clear-transaction-id") => {
+                debug!("Clearing Transaction Id");
+                self.headers.remove(&TransactionId);
+            }
+            // TODO: added-prepare
+            // TODO: deallocated-prepare
+            Some(_) => debug!("Unprocessed response header: {name:?}"),
+            None => (),
+        }
+        Ok(())
+    }
 }
